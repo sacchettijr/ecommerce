@@ -1,0 +1,38 @@
+{% extends "email/email_base.html" %}
+{% load i18n %}
+{% block email_heading %}
+    {% trans "Confirme seu e-mail" %}
+{% endblock email_heading %}
+{% block email_content %}
+    <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6;">
+        {% blocktrans with username=user.get_username %}Olá {{ username }},{% endblocktrans %}
+    </p>
+    <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6;">
+        {% blocktrans %}Você está recebendo este e-mail porque esse endereço foi usado para criar uma conta em {{ site_name }}.{% endblocktrans %}
+    </p>
+    <p style="margin: 0 0 24px; text-align: center;">
+        <a href="{{ protocol }}://{{ domain }}/email-verification/{{ uid }}/{{ token }}/{% if next %}?next={{ next|urlencode:"" }}{% endif %}"
+           style="display: inline-block;
+                  padding: 12px 28px;
+                  background-color: #0d6efd;
+                  color: #ffffff;
+                  text-decoration: none;
+                  border-radius: 6px;
+                  font-size: 15px;
+                  font-weight: 600">{% trans "Confirmar e-mail" %}</a>
+    </p>
+    <p style="margin: 0 0 8px;
+              font-size: 13px;
+              line-height: 1.5;
+              color: #6c757d">{% trans "Ou copie e cole o link abaixo no seu navegador:" %}</p>
+    <p style="margin: 0 0 24px;
+              font-size: 13px;
+              line-height: 1.5;
+              word-break: break-all">
+        <a href="{{ protocol }}://{{ domain }}/email-verification/{{ uid }}/{{ token }}/{% if next %}?next={{ next|urlencode:"" }}{% endif %}"
+           style="color: #0d6efd">{{ protocol }}://{{ domain }}/email-verification/{{ uid }}/{{ token }}/{% if next %}?next={{ next|urlencode:"" }}{% endif %}</a>
+    </p>
+    <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #6c757d;">
+        {% trans "Se você não criou essa conta, ignore este e-mail." %}
+    </p>
+{% endblock email_content %}

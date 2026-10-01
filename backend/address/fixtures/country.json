@@ -1,0 +1,26 @@
+[
+{
+    "model": "address.countrymodel",
+    "pk": 1,
+    "fields": {
+        "created_at": "2026-09-16T21:39:51.096Z",
+        "updated_at": "2026-09-16T21:39:51.096Z",
+        "created_by": null,
+        "updated_by": null,
+        "name": "Brasil",
+        "iso_code": "BR"
+    }
+},
+{
+    "model": "address.countrymodel",
+    "pk": 2,
+    "fields": {
+        "created_at": "2026-09-16T21:41:02.276Z",
+        "updated_at": "2026-09-16T21:41:02.276Z",
+        "created_by": null,
+        "updated_by": null,
+        "name": "United States",
+        "iso_code": "US"
+    }
+}
+]

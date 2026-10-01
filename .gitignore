@@ -1,0 +1,155 @@
+# =========================================================
+# TEMPORALY / TODO LIST
+# =========================================================
+
+#   TODO: remover migrations da lista quando estiver mais próximo de adicionar a produção
+#   TODO: remover frontend.old/ após fazer a adaptação das páginas.
+
+frontend.old/
+
+# =========================================================
+# IDE / EDITORS
+# =========================================================
+
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# =========================================================
+# PYTHON
+# =========================================================
+
+# Virtual environments
+.venv/
+venv/
+venv-*/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python tooling caches
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.pyrightcache/
+.pytest_cache/
+.hypothesis/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+
+# =========================================================
+# DJANGO
+# =========================================================
+
+# Collected static files
+staticfiles/
+
+# Local SQLite database
+db.sqlite3
+db.sqlite3-journal
+
+# User-uploaded/runtime files
+media/
+mediafiles/
+
+# Django local settings
+local_settings.py
+
+# Django translations
+**/locale/**/*.mo
+
+# IMPORTANT:
+# Do NOT ignore migrations.
+# Migrations are part of the application source code.
+
+# =========================================================
+# ENVIRONMENT VARIABLES
+# =========================================================
+
+.env
+.env.*
+!.env.example
+
+# =========================================================
+# NODE / REACT
+# =========================================================
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Vite
+.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# npm logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================================================
+# TEST / DEVELOPMENT
+# =========================================================
+
+.pytest_cache/
+.tox/
+.nox/
+
+# =========================================================
+# CELERY
+# =========================================================
+
+celerybeat-schedule
+celerybeat-schedule.*
+
+# =========================================================
+# DOCKER
+# =========================================================
+
+docker-compose.override.yml
+
+# =========================================================
+# CLAUDE CODE
+# =========================================================
+
+# Local Claude Code settings
+.claude/settings.local.json
+
+# =========================================================
+# OS
+# =========================================================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# Linux
+*~
+
+# =========================================================
+# TEMPORARY FILES
+# =========================================================
+
+*.log
+*.tmp
+*.temp

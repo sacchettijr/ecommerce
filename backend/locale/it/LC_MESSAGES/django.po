@@ -1,0 +1,17 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: it\n"
+
+#: product/models/ProductBaseModel.py
+msgctxt "product status"
+msgid "Active"
+msgstr "Attivo"
+
+#: account/forms/LoginForm.py
+msgid "This account has been deactivated."
+msgstr "Questo account è stato disattivato."
+
+#: account/forms/LoginForm.py
+msgid "You haven't confirmed your email yet. Check your inbox to activate the account."
+msgstr "Non hai ancora confermato la tua e-mail. Controlla la posta in arrivo per attivare l'account."

@@ -1,0 +1,164 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+
+# =========================================================
+# RUFF
+# =========================================================
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "B",
+    "UP",
+    "RUF",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+"**/admin.py" = ["RUF012", "F401"]
+"**/models.py" = ["F401"]
+"**/tests.py" = ["F401"]
+"PROJECT/settings/__init__.py" = ["F403", "F405"]
+
+
+# =========================================================
+# DJLINT
+# =========================================================
+
+[tool.djlint]
+profile = "django"
+indent = 4
+format_attribute_template_tags = true
+
+
+# =========================================================
+# PYRIGHT
+# =========================================================
+
+[tool.pyright]
+include = [
+    "PROJECT",
+    "core",
+    "account",
+    "product",
+    "address",
+    "manage.py",
+    "utils",
+
+
+]
+
+exclude = [
+    "**/__pycache__",
+    "**/migrations",
+    "venv-ecommerce",
+    ".venv",
+    "frontend",
+    "static",
+    "staticfiles",
+    "media",
+    "mediafiles",
+]
+
+venvPath = "."
+venv = "venv-ecommerce"
+
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+reportUnknownVariableType = "none"
+
+useLibraryCodeForTypes = true
+
+reportMissingImports = "error"
+reportMissingTypeStubs = false
+reportIncompatibleVariableOverride = "none"
+
+# =========================================================
+# MYPY
+# =========================================================
+
+[tool.mypy]
+python_version = "3.14"
+
+
+plugins = [
+    "mypy_django_plugin.main",
+]
+
+mypy_path = "$MYPY_CONFIG_FILE_DIR"
+
+exclude = [
+    "migrations/",
+    "venv-ecommerce/",
+    "\\.venv/",
+    "frontend/",
+]
+
+warn_unused_configs = true
+warn_redundant_casts = false
+warn_unused_ignores = true
+
+no_implicit_optional = true
+
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+show_error_codes = true
+
+
+[[tool.mypy.overrides]]
+module = [
+    "*.migrations.*",
+]
+ignore_errors = true
+
+
+[[tool.mypy.overrides]]
+module = [
+    "django_browser_reload.*",
+]
+ignore_missing_imports = true
+
+
+[[tool.mypy.overrides]]
+module = [
+    "phonenumber_field.*",
+]
+ignore_missing_imports = true
+
+
+[[tool.mypy.overrides]]
+module = [
+    "whitenoise.*",
+]
+ignore_missing_imports = true
+
+
+# =========================================================
+# DJANGO-STUBS
+# =========================================================
+
+[tool.django-stubs]
+django_settings_module = "PROJECT.settings"
+
+
+# =========================================================
+# PYTEST
+# =========================================================
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "PROJECT.settings"
+python_files = ["test_*.py"]

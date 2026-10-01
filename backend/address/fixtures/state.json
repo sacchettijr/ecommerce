@@ -1,0 +1,1029 @@
+[
+    {
+        "model": "address.statemodel",
+        "pk": 1,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Acre",
+            "code": "AC",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 2,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Alagoas",
+            "code": "AL",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 3,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Amapá",
+            "code": "AP",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 4,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Amazonas",
+            "code": "AM",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 5,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Bahia",
+            "code": "BA",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 6,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Ceará",
+            "code": "CE",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 7,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Distrito Federal",
+            "code": "DF",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 8,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Espírito Santo",
+            "code": "ES",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 9,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Goiás",
+            "code": "GO",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 10,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Maranhão",
+            "code": "MA",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 11,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Mato Grosso",
+            "code": "MT",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 12,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Mato Grosso do Sul",
+            "code": "MS",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 13,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Minas Gerais",
+            "code": "MG",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 14,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Pará",
+            "code": "PA",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 15,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Paraíba",
+            "code": "PB",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 16,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Paraná",
+            "code": "PR",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 17,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Pernambuco",
+            "code": "PE",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 18,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Piauí",
+            "code": "PI",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 19,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Rio de Janeiro",
+            "code": "RJ",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 20,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Rio Grande do Norte",
+            "code": "RN",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 21,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Rio Grande do Sul",
+            "code": "RS",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 22,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Rondônia",
+            "code": "RO",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 23,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Roraima",
+            "code": "RR",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 24,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Santa Catarina",
+            "code": "SC",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 25,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "São Paulo",
+            "code": "SP",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 26,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Sergipe",
+            "code": "SE",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 27,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Tocantins",
+            "code": "TO",
+            "country": 1
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 28,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Alabama",
+            "code": "AL",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 29,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Alaska",
+            "code": "AK",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 30,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Arizona",
+            "code": "AZ",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 31,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Arkansas",
+            "code": "AR",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 32,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "California",
+            "code": "CA",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 33,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Colorado",
+            "code": "CO",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 34,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Connecticut",
+            "code": "CT",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 35,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Delaware",
+            "code": "DE",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 36,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "District of Columbia",
+            "code": "DC",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 37,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Florida",
+            "code": "FL",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 38,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Georgia",
+            "code": "GA",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 39,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Hawaii",
+            "code": "HI",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 40,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Idaho",
+            "code": "ID",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 41,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Illinois",
+            "code": "IL",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 42,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Indiana",
+            "code": "IN",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 43,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Iowa",
+            "code": "IA",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 44,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Kansas",
+            "code": "KS",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 45,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Kentucky",
+            "code": "KY",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 46,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Louisiana",
+            "code": "LA",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 47,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Maine",
+            "code": "ME",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 48,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Maryland",
+            "code": "MD",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 49,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Massachusetts",
+            "code": "MA",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 50,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Michigan",
+            "code": "MI",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 51,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Minnesota",
+            "code": "MN",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 52,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Mississippi",
+            "code": "MS",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 53,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Missouri",
+            "code": "MO",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 54,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Montana",
+            "code": "MT",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 55,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Nebraska",
+            "code": "NE",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 56,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Nevada",
+            "code": "NV",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 57,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "New Hampshire",
+            "code": "NH",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 58,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "New Jersey",
+            "code": "NJ",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 59,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "New Mexico",
+            "code": "NM",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 60,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "New York",
+            "code": "NY",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 61,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "North Carolina",
+            "code": "NC",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 62,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "North Dakota",
+            "code": "ND",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 63,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Ohio",
+            "code": "OH",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 64,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Oklahoma",
+            "code": "OK",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 65,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Oregon",
+            "code": "OR",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 66,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Pennsylvania",
+            "code": "PA",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 67,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Puerto Rico",
+            "code": "PR",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 68,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Rhode Island",
+            "code": "RI",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 69,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "South Carolina",
+            "code": "SC",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 70,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "South Dakota",
+            "code": "SD",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 71,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Tennessee",
+            "code": "TN",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 72,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Texas",
+            "code": "TX",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 73,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Utah",
+            "code": "UT",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 74,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Vermont",
+            "code": "VT",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 75,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Virginia",
+            "code": "VA",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 76,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Washington",
+            "code": "WA",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 77,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "West Virginia",
+            "code": "WV",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 78,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Wisconsin",
+            "code": "WI",
+            "country": 2
+        }
+    },
+    {
+        "model": "address.statemodel",
+        "pk": 79,
+        "fields": {
+            "created_at": "2026-09-16T21:39:51.096Z",
+            "updated_at": "2026-09-16T21:39:51.096Z",
+            "created_by": null,
+            "updated_by": null,
+            "name": "Wyoming",
+            "code": "WY",
+            "country": 2
+        }
+    }
+]

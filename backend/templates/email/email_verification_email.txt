@@ -1,0 +1,13 @@
+{% load i18n %}{% autoescape off %}
+{% blocktrans with username=user.get_username %}Olá {{ username }},{% endblocktrans %}
+
+{% blocktrans %}Você está recebendo este e-mail porque esse endereço foi usado para criar uma conta
+em {{ site_name }}.{% endblocktrans %}
+
+{% trans "Acesse o link abaixo para confirmar seu e-mail e ativar sua conta:" %}
+{{ protocol }}://{{ domain }}/email-verification/{{ uid }}/{{ token }}/{% if next %}?next={{ next|urlencode:"" }}{% endif %}
+
+{% trans "Se você não criou essa conta, ignore este e-mail." %}
+
+{% blocktrans %}Equipe {{ site_name }}{% endblocktrans %}
+{% endautoescape %}

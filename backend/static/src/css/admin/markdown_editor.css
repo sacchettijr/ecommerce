@@ -1,0 +1,45 @@
+.ck.ck-editor {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 60rem;
+}
+
+.ck-editor__editable_inline {
+    min-height: 16rem;
+}
+
+/* O CSS do admin zera listas e títulos; restaura só dentro do conteúdo do editor. */
+.ck-editor .ck-content ul,
+.ck-editor .ck-content ol {
+    padding-left: 2rem;
+}
+
+.ck-editor .ck-content ul > li {
+    list-style-type: disc;
+}
+
+.ck-editor .ck-content ol > li {
+    list-style-type: decimal;
+}
+
+.ck-content h2,
+.ck-content h3,
+.ck-content h4 {
+    margin: 1rem 0 0.5rem;
+    font-weight: 600;
+    text-transform: none;
+    color: inherit;
+    background: none;
+}
+
+.ck-content h2 {
+    font-size: 1.5rem;
+}
+
+.ck-content h3 {
+    font-size: 1.25rem;
+}
+
+.ck-content h4 {
+    font-size: 1.1rem;
+}

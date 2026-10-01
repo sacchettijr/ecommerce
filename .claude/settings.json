@@ -1,0 +1,40 @@
+{
+    "permissions": {
+        "allow": [
+            "Bash(docker compose ps*)",
+            "Bash(docker compose logs*)",
+            "Bash(docker compose up*)",
+            "Bash(docker compose build*)",
+            "Bash(docker compose restart*)",
+
+            "Bash(docker compose exec django python manage.py test*)",
+            "Bash(docker compose exec django python manage.py check*)",
+            "Bash(docker compose exec django python manage.py makemigrations --check*)",
+            "Bash(docker compose exec django python manage.py showmigrations*)",
+
+            "Bash(docker compose exec django ruff check*)",
+            "Bash(docker compose exec django ruff format --check*)",
+            "Bash(docker compose exec django mypy*)",
+            "Bash(docker compose exec django basedpyright*)",
+
+            "Bash(curl -s -o /dev/null*)",
+
+            "Bash(git status*)",
+            "Bash(git diff*)",
+            "Bash(git log*)",
+            "Bash(git branch*)",
+
+            "Bash(find . -maxdepth*)",
+            "Bash(ls*)"
+        ],
+        "deny": [
+            "Bash(docker compose down -v*)",
+            "Bash(docker system prune*)",
+
+            "Bash(git push --force*)",
+            "Bash(git reset --hard*)",
+            "Bash(git clean -f*)",
+            "Bash(git push*)"
+        ]
+    }
+}
