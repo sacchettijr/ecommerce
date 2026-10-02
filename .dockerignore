@@ -45,32 +45,6 @@ db.sqlite3
 db.sqlite3-journal
 
 # =========================================================
-# ENVIRONMENT
-# =========================================================
-
-.env
-.env.*
-!.env.example
-
-# =========================================================
-# NODE / REACT
-# =========================================================
-
-frontend/node_modules/
-frontend/dist/
-frontend/build/
-frontend/.vite/
-
-# Node logs
-frontend/npm-debug.log*
-frontend/yarn-debug.log*
-frontend/yarn-error.log*
-frontend/pnpm-debug.log*
-
-# TypeScript
-frontend/*.tsbuildinfo
-
-# =========================================================
 # TEST / COVERAGE
 # =========================================================
 
@@ -79,12 +53,6 @@ frontend/*.tsbuildinfo
 htmlcov/
 coverage.xml
 .pytest_cache/
-
-# =========================================================
-# CLAUDE CODE
-# =========================================================
-
-.claude/
 
 # =========================================================
 # OS
