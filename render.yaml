@@ -9,8 +9,8 @@ services:
       type: web
       runtime: docker
       plan: free
-      dockerfilePath: ./backend/Dockerfile
-      dockerContext: ./backend
+      dockerfilePath: ./Dockerfile
+      dockerContext: .
       healthCheckPath: /api/core/health/
       envVars:
           #   Fase de prototipação: DEBUG continua True nos dois ambientes (local e Render).

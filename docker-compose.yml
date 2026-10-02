@@ -77,13 +77,13 @@ services:
     celery:
         container_name: ecommerce_celery
         build:
-            context: ./backend
+            context: .
         restart: unless-stopped
         entrypoint: []
         command: celery -A PROJECT worker --loglevel=info
         working_dir: /app
         volumes:
-            - ./backend:/app
+            - .:/app
         env_file:
             - .env
         networks:
@@ -100,11 +100,11 @@ services:
     backend:
         container_name: ecommerce_django
         build:
-            context: ./backend
+            context: .
         restart: unless-stopped
         working_dir: /app
         volumes:
-            - ./backend:/app
+            - .:/app
             - staticfiles:/app/staticfiles
             - media:/app/mediafiles
         env_file:
