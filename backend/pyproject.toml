@@ -31,6 +31,9 @@ line-ending = "auto"
 "**/models.py" = ["F401"]
 "**/tests.py" = ["F401"]
 "PROJECT/settings/__init__.py" = ["F403", "F405"]
+#   Django's own generated "dependencies"/"operations" class attributes are always mutable
+#   literals; the generator doesn't add ClassVar, and we never hand-edit migrations anyway.
+"**/migrations/*.py" = ["RUF012", "E501"]
 
 
 # =========================================================
@@ -65,7 +68,6 @@ exclude = [
     "**/migrations",
     "venv-ecommerce",
     ".venv",
-    "frontend",
     "static",
     "staticfiles",
     "media",
@@ -103,7 +105,6 @@ exclude = [
     "migrations/",
     "venv-ecommerce/",
     "\\.venv/",
-    "frontend/",
 ]
 
 warn_unused_configs = true

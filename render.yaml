@@ -9,12 +9,14 @@ services:
       type: web
       runtime: docker
       plan: free
-      dockerfilePath: ./Dockerfile
-      dockerContext: .
+      dockerfilePath: ./backend/Dockerfile
+      dockerContext: ./backend
       healthCheckPath: /api/core/health/
       envVars:
+          #   Fase de prototipação: DEBUG continua True nos dois ambientes (local e Render).
+          #   Vai virar False quando o projeto entrar em produção de verdade.
           - key: DEBUG
-            value: "False"
+            value: "True"
           - key: SECRET_KEY
             generateValue: true
           - key: DATABASE_URL

@@ -10,8 +10,9 @@ from .base import BASE_DIR
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
+        #   The React app (frontend/) is a separate project, sibling of backend/ — Django
+        #   never renders its templates. Only the email templates below are used.
         "DIRS": [
-            BASE_DIR / "frontend",
             BASE_DIR / "templates",
         ],
         "APP_DIRS": True,
