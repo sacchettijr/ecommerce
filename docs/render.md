@@ -77,7 +77,7 @@ do Render.
    painel, uma por serviço, em Environment):
    - No **ecommerce-django**: depois que o `ecommerce-frontend` tiver uma URL
      pública (ex.: `https://ecommerce-frontend.onrender.com`), volte aqui e
-     defina `SITE_URL` com essa URL — é o endereço que vai para os links dos
+     defina `FRONTEND_URL` com essa URL — é o endereço que vai para os links dos
      e-mails.
    - Se quiser que os e-mails realmente saiam, preencha `EMAIL_HOST`,
      `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` (mesmos
@@ -108,18 +108,22 @@ do Render.
 Confirme no serviço `ecommerce-django`, em Environment:
 
 - **Obrigatórias de verdade** (sem elas o Django não sobe): `DEBUG`,
-  `SECRET_KEY`, `SITE_URL`, `DATABASE_URL`, `EMAIL_HOST`, `EMAIL_HOST_USER`,
+  `SECRET_KEY`, `DATABASE_URL`, `EMAIL_HOST`, `EMAIL_HOST_USER`,
   `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL`. As 4 de e-mail não tentam
   conectar em lugar nenhum na inicialização — só precisam *existir* com algum
   valor; use as credenciais reais se quiser e-mails funcionando no futuro
   (com Celery), ou um valor qualquer por enquanto.
+- **Tem um valor padrão, mas precisa estar correto para o site funcionar
+  direito**: `FRONTEND_URL` — o Django sobe mesmo sem definir, só que os
+  links de e-mail saem errados. Configure com a URL real do
+  `ecommerce-frontend` assim que ela existir (ver passo 3 acima).
 - **Com valor padrão seguro quando ausentes** (não precisam ser configuradas
   no Render): `POSTGRES_*`, `REDIS_*`, `RABBITMQ_*`, `ALLOWED_HOSTS`,
-  `INTERNAL_IP`, `FRONTEND_URL`, `CSRF_TRUSTED_ORIGINS` — o código detecta o
-  ambiente (`DATABASE_URL` presente → usa o Postgres do Render; variável
-  `RENDER` presente, injetada automaticamente pelo próprio Render → cache em
-  memória em vez de Redis; `RENDER_EXTERNAL_HOSTNAME`, também automática →
-  some ao `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS` sozinha).
+  `INTERNAL_IP`, `CSRF_TRUSTED_ORIGINS` — o código detecta o ambiente
+  (`DATABASE_URL` presente → usa o Postgres do Render; variável `RENDER`
+  presente, injetada automaticamente pelo próprio Render → cache em memória
+  em vez de Redis; `RENDER_EXTERNAL_HOSTNAME`, também automática → some ao
+  `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS` sozinha).
 
 ## Limitações do plano gratuito (leia antes do primeiro deploy)
 
@@ -149,7 +153,7 @@ docker exec \
   -e RENDER=true \
   -e SECRET_KEY=alguma-chave-soh-para-teste \
   -e ALLOWED_HOSTS=localhost \
-  -e SITE_URL=http://localhost \
+  -e FRONTEND_URL=http://localhost \
   ecommerce_django sh -c "
     python manage.py check
     python manage.py collectstatic --noinput

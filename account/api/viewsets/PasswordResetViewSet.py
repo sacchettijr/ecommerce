@@ -16,8 +16,8 @@ from account.api.request_data import request_data
 from account.api.serializers import UidTokenSerializer
 from account.forms import PasswordResetForm
 from account.models import UserModel
+from utils.frontend_url import frontend_scheme_and_domain
 from utils.redirect import safe_next_path
-from utils.site_url import public_scheme_and_domain
 
 INVALID_LINK = {"code": "invalid_link"}
 
@@ -66,10 +66,10 @@ class PasswordResetViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        scheme, domain = public_scheme_and_domain()
+        scheme, domain = frontend_scheme_and_domain()
 
-        #   O e-mail (Celery) aponta para a página React de confirmação, servida pelo Nginx
-        #   (SITE_URL). A resposta é a mesma exista ou não a conta, como no fluxo antigo.
+        #   O e-mail (Celery) aponta para a página React de confirmação (FRONTEND_URL).
+        #   A resposta é a mesma exista ou não a conta, como no fluxo antigo.
         form.save(
             request=request,
             domain_override=domain,

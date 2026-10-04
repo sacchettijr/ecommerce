@@ -9,7 +9,7 @@ from django.utils.http import urlsafe_base64_encode
 from account.models import UserModel
 from account.tokens import email_verification_token
 from utils.dispatch_task import dispatch_task
-from utils.site_url import public_scheme_and_domain
+from utils.frontend_url import frontend_scheme_and_domain
 
 
 def send_verification_email(
@@ -19,8 +19,8 @@ def send_verification_email(
 
     EMAIL_VERIFICATION_TASK = "account.tasks.send_email_verification_email"
 
-    #   O link do e-mail abre a página React de confirmação, servida pelo Nginx (SITE_URL).
-    scheme, domain = public_scheme_and_domain()
+    #   O link do e-mail abre a página React de confirmação (FRONTEND_URL).
+    scheme, domain = frontend_scheme_and_domain()
 
     dispatch_task(
         action=lambda: current_app.send_task(

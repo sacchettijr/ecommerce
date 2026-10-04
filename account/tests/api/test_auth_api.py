@@ -300,18 +300,15 @@ def test_signup_drops_an_unsafe_next(client: Client) -> None:
     assert "evil.com" not in mail.outbox[0].body
 
 
-def test_signup_confirmation_email_link_points_to_the_public_site_not_the_vite_dev_server(
+def test_signup_confirmation_email_link_uses_frontend_url(
     client: Client,
     settings: Any,
 ) -> None:
-    settings.SITE_URL = "https://shop.example.com"
-    settings.FRONTEND_URL = "http://localhost:5173"
+    settings.FRONTEND_URL = "https://shop.example.com"
 
     post(client, "signup", signup_data())
 
     message, html = sent_message()
-    assert "localhost:5173" not in message.body
-    assert "localhost:5173" not in html
     user = UserModel.objects.get(email="maria@example.com")
     assert f"https://shop.example.com/email-verification/{uid_of(user)}/" in message.body
     assert f"https://shop.example.com/email-verification/{uid_of(user)}/" in html
@@ -479,21 +476,18 @@ def test_password_reset_request_sends_the_email_pointing_to_the_react_page(clien
     assert "<!DOCTYPE html>" in html
 
 
-def test_password_reset_email_link_points_to_the_public_site_not_the_vite_dev_server(
+def test_password_reset_email_link_uses_frontend_url(
     client: Client,
     settings: Any,
 ) -> None:
-    #   Bug real: o link saía com a porta interna do Vite (":5173"), inacessível para quem
-    #   recebe o e-mail. FRONTEND_URL continua existindo (é o CORS), mas não pode vazar aqui.
-    settings.SITE_URL = "https://shop.example.com"
-    settings.FRONTEND_URL = "http://localhost:5173"
+    #   Bug real: o link saía com um FRONTEND_URL desatualizado (ex.: apontando para uma
+    #   porta/origem que não está mais no ar), inacessível para quem recebe o e-mail.
+    settings.FRONTEND_URL = "https://shop.example.com"
     user = make_user()
 
     post(client, "password-reset", {"email": email_of(user)})
 
     message, html = sent_message()
-    assert "localhost:5173" not in message.body
-    assert "localhost:5173" not in html
     assert f"https://shop.example.com/password-reset/confirm/{uid_of(user)}/" in message.body
     assert f"https://shop.example.com/password-reset/confirm/{uid_of(user)}/" in html
 

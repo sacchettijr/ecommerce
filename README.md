@@ -84,10 +84,12 @@ docker exec ecommerce_frontend npm run build
 Ver `.env-example` — organizado por seção (geral, Django/backend, frontend,
 banco, Redis, Celery/RabbitMQ, e-mail, superusuário). Dois pontos importantes:
 
-- `SITE_URL` é o endereço público de todo o site (o que aparece nos links de
-  e-mail); `FRONTEND_URL` é só o endereço interno do Vite, usado apenas para
-  CORS. Não confundir os dois — já há comentários no `.env-example` e no
-  código (`backend/utils/site_url.py`) explicando a diferença.
+- `FRONTEND_URL` é o endereço onde o React está publicado *agora* (links de
+  e-mail, CORS, links de produto/categoria) — atualize-o ao trocar de modo
+  (atrás do Nginx × direto nas portas × produção). Ver comentários no
+  `.env-example` e em `utils/frontend_url.py`.
+- `VITE_API_URL` é o endereço onde o React encontra a API: `/api` (relativo)
+  atrás do Nginx, ou o endereço absoluto do Django quando acessado direto.
 - `DATABASE_URL` nunca deve existir no `.env` local (nem comentada) — é
   exclusiva do Render, configurada direto no painel dele. Localmente o banco
   continua vindo das variáveis `POSTGRES_*`.

@@ -23,10 +23,10 @@ services:
             fromDatabase:
                 name: ecommerce-db
                 property: connectionString
-          - key: SITE_URL
-            sync: false
+          #   Defina depois do primeiro deploy do "ecommerce-frontend", com a URL real dele
+          #   (https://...onrender.com) — é para onde apontam os links de e-mail.
           - key: FRONTEND_URL
-            value: http://localhost:5173
+            sync: false
           - key: SITE_NAME
             value: E-Commerce
           - key: LANGUAGE_CODE

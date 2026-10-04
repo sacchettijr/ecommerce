@@ -26,17 +26,14 @@ TEMPLATES = [
     },
 ]
 
+#   Endereço onde uma pessoa de fato acessa o React: é para onde apontam os links dos
+#   e-mails (confirmação de cadastro, redefinição de senha), os links de produto/categoria
+#   (ver get_absolute_url) e o CORS. Preencha com o que estiver realmente publicado — atrás
+#   do Nginx normalmente é "http://localhost" (porta 80); testando sem o Nginx, direto no
+#   Vite, é "http://localhost:5173"; em produção, o domínio real (HTTPS).
 FRONTEND_URL = os.getenv(
     "FRONTEND_URL",
     "http://localhost:5173",
-)
-
-#   Endereço público do site, servido pelo Nginx: é para onde apontam os links dos e-mails
-#   (confirmação de e-mail, redefinição de senha). Em produção, é o domínio real (HTTPS).
-#   Não confundir com FRONTEND_URL, que é o endereço interno do Vite, usado só pelo CORS.
-SITE_URL = os.getenv(
-    "SITE_URL",
-    "http://localhost",
 )
 
 #   Nome do site usado nos e-mails.

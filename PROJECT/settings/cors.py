@@ -1,7 +1,4 @@
-from .templates import (
-    FRONTEND_URL,
-    SITE_URL,
-)
+from .templates import FRONTEND_URL
 
 # =========================================================
 #   CORS
@@ -10,5 +7,6 @@ from .templates import (
 
 CORS_ALLOWED_ORIGINS: list[str] = [
     FRONTEND_URL,
-    SITE_URL,
 ]
+
+CORS_ALLOW_CREDENTIALS = True
