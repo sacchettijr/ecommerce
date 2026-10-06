@@ -109,10 +109,14 @@ services:
             - media:/app/mediafiles
         env_file:
             - .env
-        ports:
-            - "8000:8000"
-        # expose:
-        #     - 8000
+        # "ports" (publicada no host) comentado de propósito: com o Nginx ativo, só ele
+        # precisa ficar público. "expose" mantém a porta acessível para os outros
+        # containers (Nginx, Celery) pela rede Docker. Para voltar a testar o Django
+        # direto em http://localhost:8000 (sem Nginx), comente "expose" e descomente "ports".
+        expose:
+            - "8000"
+        # ports:
+        #     - "8000:8000"
         networks:
             - ecommerce_network
         depends_on:
@@ -147,10 +151,11 @@ services:
             - frontend_node_modules:/app/node_modules
         env_file:
             - .env
-        ports:
-            - "5173:5173"
-        # expose:
-        #     - "5173"
+        # Mesmo raciocínio do backend: com o Nginx ativo, só ele fica público.
+        expose:
+            - "5173"
+        # ports:
+        #     - "5173:5173"
         command: npm run dev -- --host 0.0.0.0
         networks:
             - ecommerce_network
@@ -164,26 +169,23 @@ services:
             start_period: 10s
 
     #   NGINX
-    #   Desativado para teste manual direto: frontend em localhost:5173, Django em
-    #   localhost:8000 (ver "ports" dos dois serviços acima). Para voltar ao normal,
-    #   descomente este bloco inteiro e recomente os "ports" de backend/frontend.
-    # nginx:
-    #     container_name: ecommerce_nginx
-    #     image: nginx:1.29-alpine
-    #     restart: unless-stopped
-    #     ports:
-    #         - "80:80"
-    #     volumes:
-    #         - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    #         - staticfiles:/app/staticfiles:ro
-    #         - media:/app/mediafiles:ro
-    #     networks:
-    #         - ecommerce_network
-    #     depends_on:
-    #         backend:
-    #             condition: service_healthy
-    #         frontend:
-    #             condition: service_healthy
+    nginx:
+        container_name: ecommerce_nginx
+        image: nginx:1.29-alpine
+        restart: unless-stopped
+        ports:
+            - "80:80"
+        volumes:
+            - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+            - staticfiles:/app/staticfiles:ro
+            - media:/app/mediafiles:ro
+        networks:
+            - ecommerce_network
+        depends_on:
+            backend:
+                condition: service_healthy
+            frontend:
+                condition: service_healthy
 
 networks:
     ecommerce_network:
