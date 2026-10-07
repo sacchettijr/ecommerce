@@ -1,6 +1,5 @@
-from typing import cast
-
 from django.db import models
+from django.db.models.fields.related import ForeignKey
 from django.utils.translation import (
     gettext_lazy as _,
 )
@@ -13,19 +12,19 @@ from .StateModel import StateModel
 
 
 class BaseAddressModel(BaseModel):
-    street = models.CharField(
+    street: models.CharField[str, str] = models.CharField(
         verbose_name=_(
             message="Street",
         ),
         max_length=255,
     )
-    number = models.CharField(
+    number: models.CharField[str, str] = models.CharField(
         verbose_name=_(
             message="Number",
         ),
         max_length=20,
     )
-    complement = models.CharField(
+    complement: models.CharField[str, str] = models.CharField(
         verbose_name=_(
             message="Complement",
         ),
@@ -33,7 +32,7 @@ class BaseAddressModel(BaseModel):
         blank=True,
         help_text="Apartment, Block, Room, ...",
     )
-    reference = models.CharField(
+    reference: models.CharField[str, str] = models.CharField(
         verbose_name=_(
             message="Reference",
         ),
@@ -41,19 +40,19 @@ class BaseAddressModel(BaseModel):
         blank=True,
         help_text="Example: Near the Central Market",
     )
-    district = models.CharField(
+    district: models.CharField[str, str] = models.CharField(
         max_length=100,
         verbose_name=_(
             message="District",
         ),
     )
-    postal_code = models.CharField(
+    postal_code: models.CharField[str, str] = models.CharField(
         verbose_name=_(
             message="Postal code",
         ),
         max_length=20,
     )
-    city = models.ForeignKey(
+    city: ForeignKey[CityModel, CityModel] = models.ForeignKey(
         verbose_name=_(
             message="City",
         ),
@@ -61,7 +60,7 @@ class BaseAddressModel(BaseModel):
         related_name="%(class)s_addresses",
         on_delete=models.PROTECT,
     )
-    state = models.ForeignKey(
+    state: ForeignKey[StateModel, StateModel] = models.ForeignKey(
         verbose_name=_(
             message="State/Province",
         ),
@@ -69,7 +68,7 @@ class BaseAddressModel(BaseModel):
         related_name="%(class)s_addresses",
         on_delete=models.PROTECT,
     )
-    country = models.ForeignKey(
+    country: ForeignKey[CountryModel, CountryModel] = models.ForeignKey(
         verbose_name=_(
             message="Country",
         ),
@@ -82,8 +81,4 @@ class BaseAddressModel(BaseModel):
         abstract = True
 
     def __str__(self) -> str:
-        street = cast(str, self.street)
-        number = cast(str, self.number)
-        district = cast(str, self.district)
-
-        return f"{street}, {number} - {district}"
+        return f"{self.street}, {self.number} - {self.district}"
