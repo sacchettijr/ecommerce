@@ -6,6 +6,7 @@
 #   TODO: remover frontend.old/ após fazer a adaptação das páginas.
 
 frontend.old/
+migrations/
 
 # =========================================================
 # IDE / EDITORS

@@ -1,0 +1,62 @@
+# Changelog
+
+Historical entries below are reconstructed only from `git log` (9 commits
+total at the time of writing — this is confirmed, not an abbreviated
+sample) plus this session's own configuration work. Where git history
+doesn't provide enough detail to describe *what* changed, that limitation
+is stated explicitly rather than guessed.
+
+## From git history (oldest → newest, by commit message only)
+
+- `ff5919b` — Reworking the project to adapt it for deployment to Render.
+- `9e5fd39` — The project has been adapted for rendering with Docker.
+- `0d5f3b9` — Render adaptation test.
+- `13d7c01` — Removed "backend" from the path (the repo was restructured
+  from a `backend/`-prefixed layout to Django living at the repo root;
+  this is the change that later made `README.md`/`docs/render.md`'s
+  `backend/`-prefixed instructions stale — see `known_issues.md`).
+- `513382b` — Testing with Nginx paused due to conflicts with the public
+  IP address.
+- `6d3bbb1` — Website communication via public IP working with HTTP;
+  verified to function securely (HTTPS).
+- `bf2fa80` — HTTPS connection working with certificate generation.
+- `2304b49` — Added the model and forms related to user addresses
+  (`UserAddressModel` + `UserAddress*Form`s — later found to be unwired,
+  see `known_issues.md`).
+- `2e0dc88` (HEAD at analysis time) — Bypassed a Docker build permission
+  issue; removed an SSL-permission check from the `DEBUG` gate.
+
+## 2026-10-11 — Full repository analysis and `.claude/` configuration rewrite
+
+Performed a comprehensive, verified (not assumed) analysis of the entire
+repository — backend (Django apps, settings, API, auth lifecycle, Celery),
+frontend (React/TS structure, routing, API integration, i18n, styling),
+infrastructure (Docker Compose, Dockerfiles, Nginx, Render, service
+configs), testing/quality tooling, and the pre-existing `.claude/`
+configuration, dependencies, and git history — using 5 parallel read-only
+investigations, then synthesized the findings into this `.claude/`
+directory.
+
+**What was found:** the entire `.claude/commands/`, `.claude/context/`,
+and `.claude/memory/` trees were empty placeholder files (0 bytes each);
+`.claude/CLAUDE.md` (609 lines, uncommitted) was substantially accurate
+but repeated a `backend/`-subdirectory path error in 4 places, matching
+the same error already present in `README.md`/`docs/render.md`.
+`.claude/settings.json` was accurate and was left unchanged.
+
+**What changed:**
+- Rewrote `.claude/CLAUDE.md`: fixed every `backend/`-prefixed path
+  reference, trimmed detailed content out to the new `.claude/context/`
+  files it now points to, kept the essential project-wide rules.
+- Wrote all 13 `.claude/context/*.md` files from scratch, grounded in the
+  verified findings (see each file for specifics).
+- Wrote all 8 `.claude/commands/*.md` files from scratch.
+- Wrote this file, `current_task.md`, and `known_issues.md` from scratch.
+- Did not modify any application source code, `README.md`,
+  `docs/render.md`, dependency manifests, Docker/deployment configuration,
+  or `.claude/settings.json` — all out of scope for this task (fixing the
+  `backend/`-path error in `README.md`/`docs/render.md` is recorded as a
+  recommendation in `current_task.md`, not performed).
+
+No code, tests, dependencies, or Docker/Git state were modified as part
+of this task — it was configuration/documentation only.
