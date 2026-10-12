@@ -1,6 +1,9 @@
 from typing import TYPE_CHECKING
 
 from django import forms
+from django.utils.translation import (
+    gettext_lazy as _,
+)
 
 from account.models import UserAddressModel
 from address.forms.mixins import (
@@ -11,6 +14,8 @@ from address.forms.mixins import (
     NormalizedReferenceFieldMixin,
     NormalizedStreetFieldMixin,
 )
+from address.forms.widgets import CityLocationSelect
+from address.models import CityModel
 
 if TYPE_CHECKING:
     BaseUserAddressForm = forms.ModelForm[UserAddressModel]
@@ -27,13 +32,16 @@ class UserAddressBaseForm(
     NormalizedPostalCodeFieldMixin,
     BaseUserAddressForm,
 ):
-    #   "user" fica no Meta.fields para o admin autônomo (UserAddressAdmin, que lista
-    #   endereços de todos os usuários). No inline sob UserAdmin, o próprio formset do
-    #   Django preenche "user" automaticamente a partir do objeto pai — o inline
-    #   controla o que aparece de fato através do próprio "fields" dele.
+    city = forms.ModelChoiceField(
+        queryset=CityModel.objects.select_related("state__country"),
+        label=_(message="City"),
+        widget=CityLocationSelect,
+    )
+
     class Meta:
         model = UserAddressModel
         fields = (
+            "primary",
             "user",
             "street",
             "number",
@@ -44,5 +52,4 @@ class UserAddressBaseForm(
             "city",
             "state",
             "country",
-            "primary",
         )
