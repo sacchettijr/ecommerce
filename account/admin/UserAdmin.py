@@ -14,6 +14,8 @@ from account.forms import (
 )
 from account.models import UserModel
 
+from .UserAddressInlineAdmin import UserAddressInlineAdmin
+
 if TYPE_CHECKING:
     UserAdminBase = BaseUserAdmin[UserModel]
 else:
@@ -23,7 +25,6 @@ else:
 @admin.register(UserModel)
 class UserAdmin(UserAdminBase):
     form = UserAdminChangeForm
-    add_form = UserAdminCreationForm
 
     fieldsets = (
         (
@@ -77,6 +78,7 @@ class UserAdmin(UserAdminBase):
         ),
     )
 
+    add_form = UserAdminCreationForm
     add_fieldsets = (
         (
             None,
@@ -143,3 +145,5 @@ class UserAdmin(UserAdminBase):
         "groups",
         "user_permissions",
     )
+
+    inlines = (UserAddressInlineAdmin,)

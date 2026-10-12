@@ -1,16 +1,8 @@
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    cast,
-)
+from typing import TYPE_CHECKING
 
 from django import forms
-from django.db import transaction
 
-from account.models import (
-    UserAddressModel,
-    UserModel,
-)
+from account.models import UserAddressModel
 from address.forms.mixins import (
     NormalizedComplementFieldMixin,
     NormalizedDistrictFieldMixin,
@@ -35,9 +27,14 @@ class UserAddressBaseForm(
     NormalizedPostalCodeFieldMixin,
     BaseUserAddressForm,
 ):
+    #   "user" fica no Meta.fields para o admin autônomo (UserAddressAdmin, que lista
+    #   endereços de todos os usuários). No inline sob UserAdmin, o próprio formset do
+    #   Django preenche "user" automaticamente a partir do objeto pai — o inline
+    #   controla o que aparece de fato através do próprio "fields" dele.
     class Meta:
         model = UserAddressModel
         fields = (
+            "user",
             "street",
             "number",
             "complement",
@@ -49,35 +46,3 @@ class UserAddressBaseForm(
             "country",
             "primary",
         )
-
-    def __init__(
-        self,
-        *args: Any,
-        user: UserModel,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.user = user
-
-    def save(
-        self,
-        commit: bool = True,
-    ) -> UserAddressModel:
-        instance = super().save(commit=False)
-        instance.user = self.user
-
-        if commit:
-            with transaction.atomic():
-                if cast(bool, instance.primary):
-                    UserAddressModel.objects.filter(
-                        user=self.user,
-                        primary=True,
-                    ).exclude(
-                        pk=instance.pk,
-                    ).update(
-                        primary=False,
-                    )
-
-                instance.save()
-
-        return instance

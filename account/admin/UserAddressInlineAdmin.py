@@ -1,0 +1,37 @@
+from typing import TYPE_CHECKING
+
+from django.contrib import admin
+
+from account.forms import UserAddressBaseForm
+from account.models import (
+    UserAddressModel,
+    UserModel,
+)
+
+if TYPE_CHECKING:
+    BaseUserAddressInlineAdmin = admin.TabularInline[
+        UserAddressModel,
+        UserModel,
+    ]
+else:
+    BaseUserAddressInlineAdmin = admin.TabularInline
+
+
+class UserAddressInlineAdmin(BaseUserAddressInlineAdmin):
+    model = UserAddressModel
+    form = UserAddressBaseForm
+    fk_name = "user"
+    extra = 1
+
+    fields = (
+        "primary",
+        "street",
+        "number",
+        "complement",
+        "reference",
+        "district",
+        "postal_code",
+        "city",
+        "state",
+        "country",
+    )
