@@ -2,7 +2,8 @@ services:
     #   BANCO DE DADOS
     database:
         container_name: ecommerce_postgres
-        image: postgres:17-bookworm
+        build:
+            context: ./database
         restart: unless-stopped
         volumes:
             - postgres:/var/lib/postgresql/data
@@ -22,7 +23,8 @@ services:
     #   VISUALIZAÇÃO E MANIPULAÇÃO DO BANCO DE DADOS
     cloudbeaver:
         container_name: ecommerce_cloudbeaver
-        image: dbeaver/cloudbeaver:26.2.0
+        build:
+            context: ./cloudbeaver
         restart: unless-stopped
         volumes:
             - cloudbeaver:/opt/cloudbeaver/workspace
@@ -36,9 +38,9 @@ services:
     #   CACHE DO DJANGO + RESULT BACKEND DO CELERY
     redis:
         container_name: ecommerce_redis
-        image: redis:8.10-alpine
+        build:
+            context: ./redis
         restart: unless-stopped
-        command: redis-server /usr/local/etc/redis/redis.conf
         volumes:
             - redis:/data
             - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
@@ -55,7 +57,8 @@ services:
     #   BROKER DE MENSAGENS DO CELERY
     rabbitmq:
         container_name: ecommerce_rabbitmq
-        image: rabbitmq:4.2.9-management-alpine
+        build:
+            context: ./rabbitmq
         restart: unless-stopped
         env_file:
             - .env
@@ -109,14 +112,8 @@ services:
             - media:/app/mediafiles
         env_file:
             - .env
-        # "ports" (publicada no host) comentado de propósito: com o Nginx ativo, só ele
-        # precisa ficar público. "expose" mantém a porta acessível para os outros
-        # containers (Nginx, Celery) pela rede Docker. Para voltar a testar o Django
-        # direto em http://localhost:8000 (sem Nginx), comente "expose" e descomente "ports".
         expose:
             - "8000"
-        # ports:
-        #     - "8000:8000"
         networks:
             - ecommerce_network
         depends_on:
@@ -151,12 +148,8 @@ services:
             - frontend_node_modules:/app/node_modules
         env_file:
             - .env
-        # Mesmo raciocínio do backend: com o Nginx ativo, só ele fica público.
         expose:
             - "5173"
-        # ports:
-        #     - "5173:5173"
-        command: npm run dev -- --host 0.0.0.0
         networks:
             - ecommerce_network
         depends_on:
@@ -171,7 +164,8 @@ services:
     #   NGINX
     nginx:
         container_name: ecommerce_nginx
-        image: nginx:1.29-alpine
+        build:
+            context: ./nginx
         restart: unless-stopped
         ports:
             - "80:80"
