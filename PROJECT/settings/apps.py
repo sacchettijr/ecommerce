@@ -21,8 +21,8 @@ INSTALLED_APPS = [
     "guardian",
     "drf_spectacular",
     #   APPS
-    "core",
-    "account",
-    "product",
-    "address",
+    "app_core",
+    "app_account",
+    "app_product",
+    "app_address",
 ]
