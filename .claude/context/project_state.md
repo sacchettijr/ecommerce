@@ -15,6 +15,10 @@ young, actively-evolving prototype, not a mature codebase).
   support. The project's best-executed feature architecturally.
 - Address reference data (Country/State/City) — admin-manageable,
   hierarchical, `PROTECT`-on-delete.
+- `UserAddressModel`: admin-manageable (standalone `UserAddressAdmin`
+  plus an inline under `UserAdmin`), with "at most one primary address
+  per user" enforced in `save()` (DB constraint as backstop) —
+  mirrors `ProductImageModel`'s pattern. No public API yet.
 - Local Docker Compose stack: Postgres, Redis, RabbitMQ, Celery worker,
   Django, Vite dev server, Nginx (reverse proxy), CloudBeaver, Certbot
   (profile-gated). Nginx currently serves HTTP (redirects to HTTPS) and
@@ -27,10 +31,6 @@ young, actively-evolving prototype, not a mature codebase).
 
 ## Partially implemented
 
-- `UserAddressModel` + its forms (`UserAddressBaseForm`/`CreateForm`/
-  `UpdateForm`) exist and implement the single-primary-address rule at
-  save time, but are **not wired to anything** — no admin registration,
-  no API. See `../memory/known_issues.md`.
 - `django-guardian` is installed and backend-registered but has no actual
   per-object permission usage anywhere.
 - Backend i18n: infrastructure (catalogs for all 5 languages) exists, but

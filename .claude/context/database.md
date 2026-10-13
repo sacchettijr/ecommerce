@@ -18,10 +18,9 @@ hosted prototype). `PROJECT/settings/database.py` parses `DATABASE_URL`
   `is_email_verified` flags. `db_table = "user"`.
 - `account.UserAddressModel` (extends `address.BaseAddressModel`): adds
   `user` (FK, `CASCADE`, `related_name="user_addresses"`) and `primary`
-  (bool). `UniqueConstraint(fields=["user"], condition=Q(primary=True))`
-  enforces at most one primary address per user at the DB level — see
-  `domain.md` for the caveat that the auto-demote-on-save convenience lives
-  in an unwired form, not the model.
+  (bool). `save()` demotes other primaries for the same user (mirrors
+  `ProductImageModel`); `UniqueConstraint(fields=["user"],
+  condition=Q(primary=True))` backs it at the DB level. See `domain.md`.
 - `address.{CountryModel,StateModel,CityModel}`: strict FK hierarchy,
   `on_delete=PROTECT` throughout (deleting a Country/State/City that's
   still referenced is blocked, not cascaded) — intentional for reference

@@ -26,12 +26,23 @@ needing further runtime verification.
    every container start) does the same job but raises instead. Running
    `migrate` without the env vars set, anywhere, silently creates a
    guessable admin account. Unresolved.
-3. **`UserAddressModel`'s address forms are dead code.**
-   `account/forms/UserAddressBaseForm.py`/`UserAddressCreateForm.py`/
-   `UserAddressUpdateForm.py` implement single-primary-address
-   auto-demotion at save time, but are not referenced by any admin class
-   or API view anywhere in the codebase (confirmed by repo-wide grep).
-   There is also no `UserAddressAdmin` at all. Unresolved.
+3. ~~**`UserAddressModel`'s address forms are dead code.**~~ **Resolved
+   2026-10-11.** `UserAddressModel.save()` now enforces "at most one
+   primary address per user" directly on the model (mirroring
+   `ProductImageModel`'s pattern exactly: lock the parent user row,
+   demote siblings, plus `validate_constraints`/`_get_unique_checks`
+   overrides so admin inline formsets don't choke on transient
+   multi-primary submissions). `UserAddressAdmin` (standalone, with a
+   `get_form()` create/update split) and `UserAddressInlineAdmin`
+   (attached to `UserAdmin.inlines`) both exist and were verified against
+   the real admin over HTTP, including submitting two inline rows marked
+   primary in the same request. The exclusivity logic that used to live
+   in the form's `save()` was removed — the model is now the single
+   source of truth, reusable by a future API too, per the project's own
+   stated preference. `UserAddressAdmin`/`UserAddressInlineAdmin` had
+   also drifted to reference nonexistent fields (`address`, `zip_code`,
+   `is_primary`) before this fix — `manage.py check` was failing with
+   `admin.E108` until corrected.
 4. **`README.md` and `docs/render.md` describe a `backend/` subdirectory
    that does not exist.** Both repeatedly reference `backend/Dockerfile`,
    `backend/PROJECT/settings/...`, `backend/venv-ecommerce`, etc. The real

@@ -65,11 +65,8 @@ included in `PROJECT/urls.py`. Country/State/City are admin-managed only.
   duplicates its validation independently. If you touch contact-form
   validation, check both files or consolidate them (see `../memory/known_issues.md`).
 - No cart/checkout/order endpoints exist (see `domain.md`).
-- No address API exists, even though address forms
-  (`account/forms/UserAddress*Form.py`) are already written — they are
-  unwired dead code today (see `../memory/known_issues.md`). If asked to build an
-  address API, start by deciding whether to reuse those forms (they already
-  implement primary-address exclusivity at the form-save level) or
-  implement the rule in a `UserAddressModel.save()` override instead (the
-  more reusable, model-level place the project's own conventions prefer —
-  see `conventions.md`).
+- No address API exists yet — `UserAddressModel` is admin-manageable
+  (standalone + inline under `UserAdmin`, see `domain.md`) but has no
+  DRF serializer/viewset. If asked to build one, the primary-address
+  exclusivity rule already lives in `UserAddressModel.save()` — reuse it
+  as-is rather than duplicating the check in a serializer.

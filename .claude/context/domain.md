@@ -54,18 +54,23 @@ Per-scope `ScopedRateThrottle` rates: `signup` 10/hour, `login` 10/minute,
   hierarchy (`Country ← State ← City`), each normalizing its `name` on
   `save()`. No public API — admin-only (`address/admin/`).
 - `UserAddressModel` extends `address.BaseAddressModel`, adds `user` (FK,
-  `CASCADE`) and `primary` (bool). **Exactly one primary address per user**
-  is enforced at the **database level only**:
-  `UniqueConstraint(fields=["user"], condition=Q(primary=True), name="unique_primary_address_per_user")`.
-  There is no `save()` override on the model itself. An application-level
-  convenience that auto-demotes the previous primary address lives in
-  `account/forms/UserAddressBaseForm.save()`, but **that form is not wired
-  to any admin class or API endpoint** — it is currently dead code (see
-  `../memory/known_issues.md`). In the actually-reachable code paths today, inserting
-  a second primary address (e.g. via the ORM directly, or a future API that
-  doesn't reuse that form) will raise an `IntegrityError`, not auto-correct.
-- There is no Django admin registration for `UserAddressModel` at all —
-  addresses are currently unmanageable through `/admin/`.
+  `CASCADE`) and `primary` (bool). **At most one primary address per
+  user** is enforced both at the model level and the database level
+  (belt and suspenders, mirroring `ProductImageModel`'s pattern):
+  `UserAddressModel.save()` locks the parent user row and demotes any
+  other primary address for that user before saving, and
+  `UniqueConstraint(fields=["user"], condition=Q(primary=True), name="unique_primary_address_per_user")`
+  guards the invariant at the DB level regardless of caller.
+  `validate_constraints`/`_get_unique_checks` are overridden so admin
+  inline formsets tolerate a transient multi-primary submission (the
+  `save()` reorganization resolves it row by row). This does **not**
+  guarantee at least one primary exists — a user with zero addresses, or
+  with addresses but none marked primary, is a valid state (same
+  tolerance as `ProductImageModel`'s `is_primary`).
+- Admin-manageable: `UserAddressAdmin` (standalone, `get_form()` picks
+  `UserAddressCreateForm`/`UserAddressUpdateForm` for add vs change) and
+  `UserAddressInlineAdmin` (attached to `UserAdmin.inlines`). No public
+  API exists yet — see `api.md`.
 
 ## Product catalog (`product` app)
 

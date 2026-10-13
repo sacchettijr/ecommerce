@@ -60,3 +60,36 @@ the same error already present in `README.md`/`docs/render.md`.
 
 No code, tests, dependencies, or Docker/Git state were modified as part
 of this task — it was configuration/documentation only.
+
+## 2026-10-11 — Wired `UserAddressModel` admin + model-level exclusivity
+
+Found `account/admin/UserAddressAdmin.py` and `UserAddressInlineAdmin.py`
+had drifted to reference fields that don't exist on the model (`address`,
+`zip_code`, `is_primary` instead of the real `street`/`postal_code`/
+`primary`) — `manage.py check` was failing outright (`admin.E108`).
+
+- `account/models/UserAddressModel.py`: added `save()` (locks the parent
+  user row, demotes any other `primary=True` address for the same user —
+  mirrors `ProductImageModel.save()`), plus `validate_constraints`/
+  `_get_unique_checks` overrides so admin inline formsets tolerate a
+  transient multi-primary submission before the model reorganizes it.
+- `account/forms/UserAddressBaseForm.py`: simplified — removed the
+  custom `save()`/`__init__` (admin never actually invoked
+  `form.save(commit=True)`, so that logic was silently dead in the admin
+  path; the model now owns the rule for every caller). `user` added to
+  `Meta.fields` for the standalone admin.
+- `account/admin/UserAddressAdmin.py`: fixed `list_display`/`list_filter`/
+  `search_fields` to real fields; added `get_form()` to use
+  `UserAddressCreateForm`/`UserAddressUpdateForm` for add vs change.
+- `account/admin/UserAddressInlineAdmin.py`: fixed `fields`; wired to
+  `UserAddressBaseForm`.
+- `account/admin/UserAdmin.py`: added `inlines = (UserAddressInlineAdmin,)`.
+
+Verified: `manage.py check`/`makemigrations --check` clean, full `pytest`
+(104 passed), ruff/mypy/basedpyright clean, and a real end-to-end HTTP
+test against the running admin (login, open a user's change page,
+submit two inline address rows both marked `primary=True` in one
+request) confirmed exactly one ends up primary. No migration was needed
+(pure behavior change, the DB constraint already existed). Updated
+`.claude/memory/known_issues.md` to mark the "dead address forms" entry
+resolved.

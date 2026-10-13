@@ -12,7 +12,7 @@ public prototype.
 | Require authentication before adding products to a cart | **Not applicable yet — there is no cart.** See `project_state.md`. |
 | User registration, email verification, account activation | **Implemented.** Signup → Celery-dispatched verification email → `EmailVerificationViewSet.confirm`. See `domain.md`. |
 | Clear, specific authentication errors based on account state | **Implemented.** Distinct `inactive` vs `email_not_verified` error codes. See `domain.md`. |
-| Reusable architecture that can grow | Mostly followed (shared `BaseModel`, per-field form mixins, shared pagination/filter/throttle infra in `core/`), with some dead/unwired code — see `../memory/known_issues.md`. |
+| Reusable architecture that can grow | Mostly followed (shared `BaseModel`, per-field form mixins, shared pagination/filter/throttle infra in `core/`), with a few unrelated dead forms still lingering — see `../memory/known_issues.md`. |
 | Keep frontend, backend, infrastructure, and tooling organized | Mostly followed; a few stale docs (not code) describe a `backend/` subdirectory that was removed — see `../memory/known_issues.md`. |
 
 ## Technology stack (verified versions)

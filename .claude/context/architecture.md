@@ -31,13 +31,9 @@ Render today, by explicit documented tradeoff, not by accident.
   regardless of caller lives in models (`save()` overrides, `Meta.constraints`)
   or signals, not in viewsets/serializers — see `ProductImageModel`
   (`product/models/ProductImageModel.py`) as the project's best example of
-  this pattern. `UserAddressModel` is a counter-example worth knowing about:
-  its "one primary per user" convenience currently lives in a form
-  (`account/forms/UserAddressBaseForm.save()`) instead of the model, and
-  that form isn't even wired to anything yet — see `../memory/known_issues.md`. If
-  you extend address handling, prefer moving the rule into the model to
-  match the project's own established convention, rather than duplicating
-  the form-level check into a new serializer.
+  this pattern. `UserAddressModel.save()` follows the same pattern (see
+  `domain.md`) — if you add an address API, reuse the model's rule rather
+  than duplicating it in a new serializer.
 - **Celery tasks are dispatch-and-forget from the caller's perspective.**
   `utils/dispatch_task.py` wraps every Celery dispatch in a try/except that
   logs and swallows broker-connection failures — callers (viewsets) always

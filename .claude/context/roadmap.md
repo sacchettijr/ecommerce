@@ -31,8 +31,9 @@ These are findings from this analysis task, not pre-existing project
 decisions — present them to the user as suggestions, not facts about
 planned work:
 
-- Decide the fate of `address`/`UserAddressModel`'s unwired forms (build
-  the API + admin, or remove the dead code).
+- `UserAddressModel` now has admin support (2026-10-11); a public API for
+  it is still a reasonable next step if user-facing address management is
+  needed.
 - Commit migrations to git, or make a deliberate, documented decision not
   to (and fix the contradictory `.gitignore` comments either way).
 - Add a frontend test framework before the frontend grows much further —
