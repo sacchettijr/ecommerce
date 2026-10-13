@@ -42,7 +42,7 @@ class ContactViewSet(
                 site_name="E-Commerce",
                 language=get_language() or "pt-br",
             ),
-            description="core.tasks.send_contact_notification_email",
+            description="app_core.tasks.send_contact_notification_email",
         )
 
         return Response(

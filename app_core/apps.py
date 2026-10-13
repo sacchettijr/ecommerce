@@ -6,4 +6,5 @@ from django.apps import (
 class CoreConfig(
     AppConfig,
 ):
-    name = "core"
+    name = "app_core"
+    label = "core"

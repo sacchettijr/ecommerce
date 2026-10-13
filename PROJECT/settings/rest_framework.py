@@ -13,7 +13,7 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
     ],
-    "DEFAULT_PAGINATION_CLASS": "core.api.pagination.StandardPagination",
+    "DEFAULT_PAGINATION_CLASS": "app_core.api.pagination.StandardPagination",
     "PAGE_SIZE": env_int(
         name="PAGE_SIZE",
         default=25,

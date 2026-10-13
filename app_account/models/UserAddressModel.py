@@ -16,7 +16,7 @@ from django.utils.translation import (
     gettext_lazy as _,
 )
 
-from address.models import BaseAddressModel
+from app_address.models import BaseAddressModel
 
 if TYPE_CHECKING:
     from .UserModel import UserModel

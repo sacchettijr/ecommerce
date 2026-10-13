@@ -17,9 +17,11 @@ needing further runtime verification.
    ignored. **Impact**: a fresh clone cannot run `manage.py migrate`
    successfully for any app. Unresolved — needs a user decision (commit
    them now, or keep ignoring deliberately and fix the contradictory
-   comments).
+   comments). Re-confirmed 2026-10-13 during the `app_` rename migration —
+   unaffected by that rename either way (the `.gitignore` rule still
+   applies regardless of package name).
 2. **Weak hard-coded fallback superuser.**
-   `account/signals/create_default_superuser.py` creates
+   `app_account/signals/create_default_superuser.py` creates
    `admin@example.com` / `admin123` on `post_migrate` whenever no
    superuser exists and `DJANGO_SUPERUSER_*` env vars are unset. The
    separate `create_admin` management command (run by `entrypoint.sh` on
@@ -57,7 +59,7 @@ needing further runtime verification.
 5. **`docs/render.md` disagrees with the actual `render.yaml`.** The doc
    claims `render.yaml` sets `dockerfilePath`/`dockerContext` to
    `./backend`; the real file sets `./Dockerfile` / `.` (root).
-6. **`account/forms/UserUpdateForm.py`'s `Meta.model` is a type
+6. **`app_account/forms/UserUpdateForm.py`'s `Meta.model` is a type
    annotation, not an assignment** (`model: UserModel` instead of
    `model = UserModel`). Currently latent/undetected because the form is
    never instantiated anywhere in the codebase. Will raise
@@ -65,9 +67,9 @@ needing further runtime verification.
    someone tries to use it.
 7. **Several other forms/helpers are dead code**: `PasswordChangeForm`,
    `UserUpdateForm` (zero usages beyond their own `__init__.py` export),
-   `core/forms/ContactForm.py` (unused — `ContactSerializer` duplicates its
+   `app_core/forms/ContactForm.py` (unused — `ContactSerializer` duplicates its
    validation independently, risk of the two drifting apart),
-   `product/context_processors.py:context_processors_product_categories`
+   `app_product/context_processors.py:context_processors_product_categories`
    (never registered in `TEMPLATES["OPTIONS"]["context_processors"]`).
 8. **`django-guardian` is installed and backend-registered but has zero
    actual usage** (no `assign_perm`, no object-level permission checks
@@ -94,10 +96,23 @@ needing further runtime verification.
     no pre-commit hooks). All checks are run by hand.
 14. **Zero frontend test infrastructure** — no framework installed, no
     test files, no `test` script.
-15. **`address/` and `core/` apps have zero backend tests.**
+15. **`app_address/` and `app_core/` apps have zero backend tests.**
 16. **`.claude/commands/`, `.claude/context/`, `.claude/memory/` were all
     completely empty (0 bytes)** before this task — fixed as part of this
     documentation pass (see `changelog.md`).
+17. ~~**Each app's `AppConfig.name` still said the old bare package name
+    after the directory rename to `app_`.**~~ **Resolved 2026-10-13.**
+    `app_core/apps.py`, `app_account/apps.py`, `app_product/apps.py`, and
+    `app_address/apps.py` all still had `name = "core"` (etc.) after their
+    directories moved to `app_core` (etc.) — Django resolves the app
+    module to import from this exact attribute at startup, so the backend
+    container failed to boot at all
+    (`django.core.exceptions.ImproperlyConfigured: Cannot import 'core'`).
+    Fixed by setting `name = "app_core"` (etc.) and adding an explicit
+    `label = "core"` (etc., the old short name) on each — see
+    `changelog.md` and `structure.md`'s "Django apps" section for the
+    full name/label table and why the label was deliberately not
+    renamed.
 
 ## Lower-severity / cosmetic
 

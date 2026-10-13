@@ -33,7 +33,7 @@ AUTH_USER_MODEL = "account.UserModel"
 
 AUTHENTICATION_BACKENDS: list[str] = [
     "guardian.backends.ObjectPermissionBackend",
-    "account.backends.EmailVerifiedModelBackend.EmailVerifiedModelBackend",
+    "app_account.backends.EmailVerifiedModelBackend.EmailVerifiedModelBackend",
 ]
 
 

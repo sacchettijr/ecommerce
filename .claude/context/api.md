@@ -18,8 +18,9 @@ live schema/docs (not just installed — confirmed: `SpectacularAPIView`/
 | `/api/core/contact/` | contact form submission (throttled, dispatches an email via Celery) |
 | `/api/core/health/` | health check (used by the Docker/Render healthcheck) |
 
-`address` has **no API** — no `address/urls.py` exists and it is not
-included in `PROJECT/urls.py`. Country/State/City are admin-managed only.
+`app_address` has **no API** — no `app_address/urls.py` exists and it is
+not included in `PROJECT/urls.py`. Country/State/City are admin-managed
+only.
 
 ## Conventions actually in use
 
@@ -28,9 +29,9 @@ included in `PROJECT/urls.py`. Country/State/City are admin-managed only.
   `X-CSRFToken` read from the `csrftoken` cookie (fetching
   `/api/account/session/` first if the cookie isn't set yet, since that's
   the one endpoint guaranteed to set it). See `security.md`.
-- **Pagination**: `core.api.pagination.StandardPagination` — adds
+- **Pagination**: `app_core.api.pagination.StandardPagination` — adds
   `count`/`total_pages`/`current_page`/`next`/`previous`/`results`.
-- **Ordering**: `core.api.filters.StableOrderingFilter` adds a `pk`
+- **Ordering**: `app_core.api.filters.StableOrderingFilter` adds a `pk`
   tie-breaker to any ordering so paginated results don't reshuffle between
   pages.
 - **Filtering**: `django-filter`'s `DjangoFilterBackend` (e.g.

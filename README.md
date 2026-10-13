@@ -16,7 +16,7 @@ ecommerce/
 │   ├── pyproject.toml  (ruff, mypy, basedpyright, pytest)
 │   ├── venv-ecommerce/ (venv local, não versionado)
 │   ├── PROJECT/        settings, urls, celery app
-│   ├── account/ address/ core/ product/   apps Django
+│   ├── app_account/ app_address/ app_core/ app_product/   apps Django
 │   ├── static/ staticfiles/ media/ mediafiles/ templates/ locale/
 │   └── utils/
 ├── frontend/            React + Vite (projeto independente)

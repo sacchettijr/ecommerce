@@ -53,7 +53,7 @@ def run_celery_tasks_inline() -> Iterator[None]:
             side_effect=verification_send_task,
         ),
         patch(
-            "account.forms.PasswordResetForm.send_password_reset_email.delay",
+            "app_account.forms.PasswordResetForm.send_password_reset_email.delay",
             side_effect=reset_delay,
         ),
     ):
@@ -104,8 +104,8 @@ def uid_of(user: UserModel) -> str:
 def test_verification_task_is_registered_under_the_name_used_to_enqueue_it() -> None:
     #   O envio usa send_task(name=...): se os nomes divergirem, o worker descarta a tarefa
     #   ("unregistered task") e o e-mail nunca sai, mesmo com todos os outros testes passando.
-    assert send_email_verification_email.name == "account.tasks.send_email_verification_email"
-    assert "account.tasks.send_email_verification_email" in current_app.tasks
+    assert send_email_verification_email.name == "app_account.tasks.send_email_verification_email"
+    assert "app_account.tasks.send_email_verification_email" in current_app.tasks
 
 
 # ---------------------------------------------------------- safe_next_path

@@ -88,7 +88,7 @@ before assuming an API from an older version).
   per-module `ignore_missing_imports` for `django_browser_reload`,
   `phonenumber_field`, `whitenoise`; migrations excluded.
 - **basedpyright**: `typeCheckingMode = "strict"` over
-  `PROJECT, core, account, product, address, manage.py, utils`
+  `PROJECT, app_core, app_account, app_product, app_address, manage.py, utils`
   (repo-root-relative paths — no `backend/` prefix).
 - **pytest**: minimal config — `DJANGO_SETTINGS_MODULE = "PROJECT.settings"`,
   `python_files = ["test_*.py"]`. No markers, no `addopts`, no coverage

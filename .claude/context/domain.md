@@ -2,13 +2,13 @@
 
 Only rules actually verified in source code are documented here.
 
-## User lifecycle (account app)
+## User lifecycle (app_account, Django label `account`)
 
-1. `SignUpViewSet.create()` validates `account/forms/SignUpForm.py`, saves
+1. `SignUpViewSet.create()` validates `app_account/forms/SignUpForm.py`, saves
    a `UserModel` with `is_active=True` (default) and `is_email_verified=False`
    (default), then dispatches the verification email via Celery
-   (`account/emails/send_verification_email.py` → task
-   `account.tasks.send_email_verification_email`, dispatched **by task name**
+   (`app_account/emails/send_verification_email.py` → task
+   `app_account.tasks.send_email_verification_email`, dispatched **by task name**
    via `current_app.send_task(...)` rather than a direct `.delay()` import —
    intentional, so a worker/name mismatch drops the task silently instead of
    raising an import error at dispatch time).
@@ -19,10 +19,10 @@ Only rules actually verified in source code are documented here.
    `{"code": "invalid_link"}` / 400 — this is intentional (no information
    leak about *why* a link failed).
 3. Login is gated by **both** `is_active` and `is_email_verified`:
-   `account/backends/EmailVerifiedModelBackend.user_can_authenticate()`
+   `app_account/backends/EmailVerifiedModelBackend.user_can_authenticate()`
    requires both to be true, so Django's standard backend returns `None`
    (as if the password were wrong) when either is false.
-4. `account/forms/LoginForm.py` then re-checks manually to produce a
+4. `app_account/forms/LoginForm.py` then re-checks manually to produce a
    *specific* error when the password is actually correct:
    - correct password, `is_active=False` → `ValidationError(code="inactive", ...)`,
      message: "This account has been deactivated."
@@ -48,12 +48,12 @@ Per-scope `ScopedRateThrottle` rates: `signup` 10/hour, `login` 10/minute,
 (create action; `validate`/`confirm` use `token_check` 60/hour), `contact`
 5/hour.
 
-## Addresses (`account.UserAddressModel`, `address` app)
+## Addresses (`account.UserAddressModel`, app_address, Django label `address`)
 
-- `address/models/{CountryModel,StateModel,CityModel}.py` form a strict
+- `app_address/models/{CountryModel,StateModel,CityModel}.py` form a strict
   hierarchy (`Country ← State ← City`), each normalizing its `name` on
-  `save()`. No public API — admin-only (`address/admin/`).
-- `UserAddressModel` extends `address.BaseAddressModel`, adds `user` (FK,
+  `save()`. No public API — admin-only (`app_address/admin/`).
+- `UserAddressModel` extends `app_address.models.BaseAddressModel`, adds `user` (FK,
   `CASCADE`) and `primary` (bool). **At most one primary address per
   user** is enforced both at the model level and the database level
   (belt and suspenders, mirroring `ProductImageModel`'s pattern):
@@ -72,7 +72,7 @@ Per-scope `ScopedRateThrottle` rates: `signup` 10/hour, `login` 10/minute,
   `UserAddressInlineAdmin` (attached to `UserAdmin.inlines`). No public
   API exists yet — see `api.md`.
 
-## Product catalog (`product` app)
+## Product catalog (app_product, Django label `product`)
 
 - `ProductCategoryModel` / `ProductModel` share `ProductBaseModel`
   (`active`, `name`, auto-generated unique `slug`). Public API only returns
@@ -90,7 +90,7 @@ Per-scope `ScopedRateThrottle` rates: `signup` 10/hour, `login` 10/minute,
   primary, then calls `organize_product_images()` to renumber `order` with
   no gaps/duplicates — including moving an image to a *different* product
   (closes the gap on the source product too). A `post_delete` signal
-  (`product/signals/product_image.py`) re-runs the same renumbering after
+  (`app_product/signals/product_image.py`) re-runs the same renumbering after
   deletion and promotes `order=0` to primary if the deleted image was
   primary and none remains.
 

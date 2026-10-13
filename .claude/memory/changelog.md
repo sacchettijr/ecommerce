@@ -93,3 +93,56 @@ request) confirmed exactly one ends up primary. No migration was needed
 (pure behavior change, the DB constraint already existed). Updated
 `.claude/memory/known_issues.md` to mark the "dead address forms" entry
 resolved.
+
+## 2026-10-13 — Completed the `app_` prefix rename for all 4 Django apps
+
+Directories had already been renamed (`core→app_core`, `account→app_account`,
+`product→app_product`, `address→app_address`) and `INSTALLED_APPS` updated
+before this task started, but every app's `AppConfig.name` still said the
+old bare name — Django failed to boot (`ImproperlyConfigured: Cannot
+import 'core'`). Fixed `name =` on all 4 `AppConfig`s to the new package
+path and added an explicit `label =` set to the **old** short name on
+each, preserving `AUTH_USER_MODEL = "account.UserModel"`, `ContentType`/
+`Permission` rows, and the pre-existing (locally-present, still
+git-ignored per the known migrations issue) migration files' `dependencies`
+tuples — confirmed via `makemigrations --check --dry-run` reporting "No
+changes detected" against those same files after the rename.
+
+Fixed every real Python import path found via systematic repo-wide grep:
+`app_account/models/UserAddressModel.py`, `app_address/models/*.py`,
+`app_account/models/UserModel.py` (cross-app imports),
+`app_product/apps.py`'s `import_module()`, `PROJECT/urls.py`'s
+`include()` calls, `PROJECT/settings/authentication.py`'s
+`AUTHENTICATION_BACKENDS`, `PROJECT/settings/middleware.py`'s
+`MIDDLEWARE`, `PROJECT/settings/rest_framework.py`'s
+`DEFAULT_PAGINATION_CLASS`, `pyproject.toml`'s `[tool.pyright] include`,
+and a `unittest.mock.patch()` target string plus two task-name
+assertions in `app_account/tests/api/test_auth_api.py`. Updated the
+Celery task-name strings in `app_account/emails/send_verification_email.py`
+and `app_account/tasks/send_email_verification_email.py` to match (an
+arbitrary dispatch-by-name string, not an app-label reference, so no
+compatibility reason to keep the old value). Left `AUTH_USER_MODEL`,
+`UserAddressModel.user`'s `to="account.UserModel"`, and
+`data/init_data_*.json`'s `"address.*"` fixture-model keys unchanged —
+confirmed these are `app_label.ModelName` references, not Python import
+paths.
+
+Verified: `manage.py check`, `makemigrations --check --dry-run`, full
+`pytest` (104 passed, unchanged count), `ruff`, `mypy`, `basedpyright` —
+all clean. Live HTTP checks through Nginx confirmed all 4 apps' routes
+respond correctly. Updated every affected `.claude/context/*.md` file,
+`.claude/CLAUDE.md`, and two `.claude/commands/*.md` files to the new
+package names with the label-preservation note. Fixed one incidental
+documentation inaccuracy in `README.md`'s structure tree.
+
+## 2026-10-13 — Verified `data/init_data_*.json` fixtures need no change
+
+Checked, on request, whether the `app_` rename required updating the
+`"model": "address.countrymodel"` / `"address.statemodel"` /
+`"address.citymodel"` keys in `data/init_data_{Country,State,City}Model.json`.
+Confirmed via `apps.get_app_config("address")` that the label `address`
+still resolves to the `app_address` package (as designed — see the
+previous entry), then actually ran `manage.py loaddata` with all three
+files against the running database: all 5,650 objects installed with no
+error, counts matched (2 countries, 77 states, 5,571 cities), and
+`manage.py check` stayed clean. No fixture changes were needed or made.

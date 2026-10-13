@@ -34,7 +34,7 @@
 ## Confirmed security-relevant issues
 
 1. **Weak hard-coded fallback superuser.**
-   `account/signals/create_default_superuser.py` creates a superuser with
+   `app_account/signals/create_default_superuser.py` creates a superuser with
    `admin@example.com` / `admin123` whenever no superuser exists and
    `DJANGO_SUPERUSER_*` env vars are unset, triggered automatically on
    every `post_migrate`. The separate `create_admin` management command

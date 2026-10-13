@@ -20,5 +20,5 @@ MIDDLEWARE: list[str] = [
     #   AUTO RELOAD WHEN SAVING
     "django_browser_reload.middleware.BrowserReloadMiddleware",
     #   MIDDLEWARE TO GET THE LOGGED-IN USER
-    "account.middleware.CurrentUserMiddleware",
+    "app_account.middleware.CurrentUserMiddleware",
 ]

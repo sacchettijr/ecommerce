@@ -12,10 +12,10 @@ ecommerce/
 ├── .claude/                 Claude Code configuration (this directory)
 ├── PROJECT/                 Django project package (settings, urls, celery app)
 │   └── settings/            modularized settings — see below
-├── account/                 users, auth, email verification, user addresses
-├── address/                 Country/State/City reference data (admin-only)
-├── core/                    shared BaseModel, contact form/API, health check
-├── product/                 catalog: categories, products, product images
+├── app_account/             users, auth, email verification, user addresses
+├── app_address/             Country/State/City reference data (admin-only)
+├── app_core/                shared BaseModel, contact form/API, health check
+├── app_product/             catalog: categories, products, product images
 ├── utils/                   cross-app helper functions (no Django app of its own)
 ├── static/, staticfiles/    source static assets / collectstatic output
 ├── templates/                Django templates (email only — see note below)
@@ -81,12 +81,24 @@ documented in code comments — keep it in mind before reordering that list.
 
 ## Django apps
 
-| App | Has API? | Has Admin? | Responsibility |
-|---|---|---|---|
-| `account/` | Yes, full | Yes (`UserAdmin` only) | `UserModel`, email verification, login/logout/session, password reset, `UserAddressModel` |
-| `address/` | **No** (admin-only) | Yes (Country/State/City) | Hierarchical reference data: `CountryModel` → `StateModel` → `CityModel` |
-| `core/` | Yes, full | — (no concrete models) | Shared `BaseModel` (audit fields), contact form/API, health check, shared pagination/filter/throttle infra |
-| `product/` | Yes, full | Yes | `ProductCategoryModel`, `ProductModel`, `ProductImageModel` |
+Each app's Python package is now `app_`-prefixed (e.g. `app_account`), but
+its Django **app label** was deliberately preserved as the short original
+name (`account`, `address`, `core`, `product`) via an explicit `label =`
+on each app's `AppConfig`, alongside `name = "app_account"` etc. This keeps
+existing migrations, `AUTH_USER_MODEL = "account.UserModel"`,
+`ContentType`/`Permission` rows, and FK `to="account.UserModel"`-style
+string references valid without any database rewrite — only real Python
+import paths (`from app_account.models import ...`,
+`include(arg="app_account.urls")`, `AUTHENTICATION_BACKENDS`,
+`MIDDLEWARE`, Celery task name strings, `pyproject.toml`'s pyright
+`include`) needed to change. See `../memory/changelog.md`.
+
+| App | Package | Label (unchanged) | Has API? | Has Admin? | Responsibility |
+|---|---|---|---|---|---|
+| `app_account/` | `app_account` | `account` | Yes, full | Yes (`UserAdmin` only) | `UserModel`, email verification, login/logout/session, password reset, `UserAddressModel` |
+| `app_address/` | `app_address` | `address` | **No** (admin-only) | Yes (Country/State/City) | Hierarchical reference data: `CountryModel` → `StateModel` → `CityModel` |
+| `app_core/` | `app_core` | `core` | Yes, full | — (no concrete models) | Shared `BaseModel` (audit fields), contact form/API, health check, shared pagination/filter/throttle infra |
+| `app_product/` | `app_product` | `product` | Yes, full | Yes | `ProductCategoryModel`, `ProductModel`, `ProductImageModel` |
 
 There is **no shopping-cart app or model anywhere** in the backend —
 see `domain.md` and `project_state.md`.
@@ -97,7 +109,7 @@ Shared, reusable helpers with no Django app of their own: `normalize.py`
 (whitespace/email normalization), `validator.py` (shared field validators),
 `dispatch_task.py` (Celery dispatch that logs and swallows broker errors
 instead of failing the HTTP request), `current_user.py` (thread-local user
-used by `core.models.BaseModel.save()` to populate `created_by`/`updated_by`),
+used by `app_core.models.BaseModel.save()` to populate `created_by`/`updated_by`),
 `env.py` (typed `.env` accessors), `image.py`, `upload.py`.
 
 ## Frontend (`frontend/`)

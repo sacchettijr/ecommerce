@@ -10,19 +10,19 @@ data. Each app follows `tests/{api,models,views}/` + `tests/factories/`.
 
 | App | Coverage |
 |---|---|
-| `account/` | Partial. Well covered: login/logout/session/signup/email-verification/password-reset flows, `is_staff` admin gate, `safe_next_path`, `frontend_scheme_and_domain` (`account/tests/api/test_auth_api.py`, `account/tests/test_frontend_url.py`). **Not covered**: `UserAddressModel`, `UserManagerModel` edge cases, every form except the auth ones exercised via the API tests, `account/signals/create_default_superuser.py`, `account/management/commands/create_admin.py`. |
-| `address/` | **Zero tests.** No model, form, or admin tests at all. |
-| `core/` | **Zero tests.** `BaseModel`, `ContactForm`, `ContactSerializer`, `ContactViewSet`, `StableOrderingFilter`, `StandardPagination`, the health-check view — none tested. |
-| `product/` | Partial, concentrated on image ordering/upload paths (`product/tests/models/test_product_image_rules.py`, `test_upload_paths.py`). **Not covered**: `ProductCategoryModel`/`ProductModel` core logic beyond incidental factory use, `ProductForm`/`ProductCategoryForm`, `ProductFilterSet`, the list/category viewsets (only the detail viewset is indirectly touched), most serializers. |
+| `app_account/` (label `account`) | Partial. Well covered: login/logout/session/signup/email-verification/password-reset flows, `is_staff` admin gate, `safe_next_path`, `frontend_scheme_and_domain` (`app_account/tests/api/test_auth_api.py`, `app_account/tests/test_frontend_url.py`). **Not covered**: `UserAddressModel`, `UserManagerModel` edge cases, every form except the auth ones exercised via the API tests, `app_account/signals/create_default_superuser.py`, `app_account/management/commands/create_admin.py`. |
+| `app_address/` (label `address`) | **Zero tests.** No model, form, or admin tests at all. |
+| `app_core/` (label `core`) | **Zero tests.** `BaseModel`, `ContactForm`, `ContactSerializer`, `ContactViewSet`, `StableOrderingFilter`, `StandardPagination`, the health-check view — none tested. |
+| `app_product/` (label `product`) | Partial, concentrated on image ordering/upload paths (`app_product/tests/models/test_product_image_rules.py`, `test_upload_paths.py`). **Not covered**: `ProductCategoryModel`/`ProductModel` core logic beyond incidental factory use, `ProductForm`/`ProductCategoryForm`, `ProductFilterSet`, the list/category viewsets (only the detail viewset is indirectly touched), most serializers. |
 
 No app has any `tests/views/*.py` content — every `views/__init__.py`
 across every app is empty.
 
 ### Factories (only 4 exist, repo-wide)
 
-`account.tests.factories.UserFactory`,
-`product.tests.factories.{ProductCategoryFactory,ProductFactory,ProductImageFactory}`.
-No factories exist for `address` (`Country`/`State`/`City`) or `core` —
+`app_account.tests.factories.UserFactory`,
+`app_product.tests.factories.{ProductCategoryFactory,ProductFactory,ProductImageFactory}`.
+No factories exist for `app_address` (`Country`/`State`/`City`) or `app_core` —
 consistent with those apps having zero tests. If you add tests for those
 apps, you will need to write factories first.
 

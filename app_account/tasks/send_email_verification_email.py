@@ -38,7 +38,7 @@ HTML_TEMPLATE_NAME = "email/email_verification_email.html"
 #   Nome explícito: send_verification_email envia a tarefa por este nome (sem importá-la),
 #   e o nome automático do Celery seria "<módulo>.<função>" e não seria reconhecido pelo worker.
 @shared_task(
-    name="account.tasks.send_email_verification_email",
+    name="app_account.tasks.send_email_verification_email",
     bind=True,
     max_retries=3,
     default_retry_delay=60,

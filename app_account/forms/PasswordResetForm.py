@@ -38,5 +38,5 @@ class PasswordResetForm(DjangoPasswordResetForm):
                 to_email=to_email,
                 language=translation.get_language() or settings.LANGUAGE_CODE,
             ),
-            description="account.tasks.send_password_reset_email",
+            description="app_account.tasks.send_password_reset_email",
         )

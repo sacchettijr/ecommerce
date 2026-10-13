@@ -30,7 +30,7 @@ Render today, by explicit documented tradeoff, not by accident.
 - **Django views/viewsets stay thin.** Business logic that must hold
   regardless of caller lives in models (`save()` overrides, `Meta.constraints`)
   or signals, not in viewsets/serializers — see `ProductImageModel`
-  (`product/models/ProductImageModel.py`) as the project's best example of
+  (`app_product/models/ProductImageModel.py`) as the project's best example of
   this pattern. `UserAddressModel.save()` follows the same pattern (see
   `domain.md`) — if you add an address API, reuse the model's rule rather
   than duplicating it in a new serializer.
@@ -42,9 +42,9 @@ Render today, by explicit documented tradeoff, not by accident.
   comments, and lets the app run (with silently-unsent email) even without
   RabbitMQ configured — e.g. on Render today.
 - **Audit fields are populated via middleware + thread-local, not explicit
-  passing.** `core.BaseModel.save()` reads the current user from
+  passing.** `app_core.models.BaseModel.save()` reads the current user from
   `utils.current_user.get_current_user()`, which
-  `account/middleware/CurrentUserMiddleware.py` sets per-request. Keep this
+  `app_account/middleware/CurrentUserMiddleware.py` sets per-request. Keep this
   in mind if you ever run model `save()` outside a normal request (e.g. a
   management command or Celery task) — `created_by`/`updated_by` will be
   `None` there unless you set the thread-local yourself.

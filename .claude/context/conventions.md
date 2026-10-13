@@ -5,14 +5,14 @@
 - Models: `XxxModel` suffix (`UserModel`, `ProductImageModel`). Abstract
   bases: `BaseModel`, `BaseAddressModel`.
 - One class per file, filename matches the class name
-  (`account/models/UserModel.py` → `class UserModel`). Apps re-export
+  (`app_account/models/UserModel.py` → `class UserModel`). Apps re-export
   everything through `__init__.py` (`from .UserModel import UserModel`,
   with `__all__`).
 - Forms: `XxxForm`, small per-field **mixins** for reusable validation
   (`NormalizedNameFieldMixin`, `NormalizedStreetFieldMixin`, etc.), one
   mixin per field even when the logic is nearly identical across apps
-  (e.g. three separate near-identical "name" mixins exist for `account`,
-  `product`, and `address` — this duplication is a deliberate, consistent
+  (e.g. three separate near-identical "name" mixins exist for `app_account`,
+  `app_product`, and `app_address` — this duplication is a deliberate, consistent
   project style, not an oversight to "DRY up" uninvited).
 - Admin classes and inlines follow the `TYPE_CHECKING` generic-base pattern
   throughout:
@@ -51,7 +51,7 @@
   without discussing the tradeoff (signup/password-reset/contact would
   start failing outright whenever RabbitMQ is briefly unavailable).
 - Do not introduce a second insecure-fallback bootstrap path like
-  `account/signals/create_default_superuser.py`'s hard-coded admin
+  `app_account/signals/create_default_superuser.py`'s hard-coded admin
   credentials — see `../memory/known_issues.md`. If you touch superuser bootstrapping,
   reconcile it with `create_admin`'s stricter (raise-if-missing) behavior
   instead of adding a third variant.
@@ -90,7 +90,7 @@
 - Keep new tests in the matching app's `tests/{api,models,views}/` and
   `tests/factories/` subfolders, matching the existing per-app layout —
   don't put a new test file directly under `tests/` the way
-  `account/tests/test_frontend_url.py` currently does (an existing
+  `app_account/tests/test_frontend_url.py` currently does (an existing
   inconsistency to avoid repeating, not a pattern to copy).
 
 ## Docker / infra

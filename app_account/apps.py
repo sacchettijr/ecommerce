@@ -5,7 +5,8 @@ from django.utils.translation import gettext_lazy as _
 class AccountConfig(
     AppConfig,
 ):
-    name = "account"
+    name = "app_account"
+    label = "account"
     verbose_name = _(
         message="Account",
     )

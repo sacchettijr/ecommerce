@@ -7,10 +7,11 @@ from django.utils.translation import (
 
 
 class ProductConfig(AppConfig):
-    name = "product"
+    name = "app_product"
+    label = "product"
     verbose_name = _(
         message="Product",
     )
 
     def ready(self) -> None:
-        import_module(name="product.signals.product_image")
+        import_module(name="app_product.signals.product_image")

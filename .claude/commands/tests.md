@@ -5,24 +5,24 @@ description: Identify missing test coverage, create or update tests, and run rel
 Work on test coverage for: $ARGUMENTS
 
 If no specific target is given, consult `.claude/context/testing.md` for
-known gaps — `address/` and `core/` currently have zero tests, and several
-specific models/forms/viewsets in `account/`/`product/` are listed there
-as uncovered.
+known gaps — `app_address/` and `app_core/` currently have zero tests, and
+several specific models/forms/viewsets in `app_account/`/`app_product/`
+are listed there as uncovered.
 
 Steps:
 
 1. Confirm the current coverage gap by reading the actual code and the
    app's `tests/` directory — `.claude/context/testing.md` is a snapshot,
    not guaranteed current.
-2. If the target app has no factories yet (`address`/`core` do not),
-   write them first, following the existing pattern in
-   `account/tests/factories/` or `product/tests/factories/`
+2. If the target app has no factories yet (`app_address`/`app_core` do
+   not), write them first, following the existing pattern in
+   `app_account/tests/factories/` or `app_product/tests/factories/`
    (`TYPE_CHECKING`-guarded `DjangoModelFactory[Model]`, `Faker`/
    `SubFactory` usage).
 3. Write function-based pytest tests, `pytestmark =
    pytest.mark.django_db`, matching the app's `tests/{api,models,views}/`
    layout — do not place a new test file directly under `tests/` the way
-   `account/tests/test_frontend_url.py` currently does.
+   `app_account/tests/test_frontend_url.py` currently does.
 4. Cover: normal behavior, invalid input, boundary conditions, relevant
    database constraints (e.g. the `UniqueConstraint`s on
    `ProductImageModel`/`UserAddressModel`), and — for anything touching

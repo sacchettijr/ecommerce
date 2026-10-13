@@ -53,10 +53,10 @@ format_attribute_template_tags = true
 [tool.pyright]
 include = [
     "PROJECT",
-    "core",
-    "account",
-    "product",
-    "address",
+    "app_core",
+    "app_account",
+    "app_product",
+    "app_address",
     "manage.py",
     "utils",
 

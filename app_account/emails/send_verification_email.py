@@ -17,7 +17,7 @@ def send_verification_email(
     next_path: str = "",
 ) -> None:
 
-    EMAIL_VERIFICATION_TASK = "account.tasks.send_email_verification_email"
+    EMAIL_VERIFICATION_TASK = "app_account.tasks.send_email_verification_email"
 
     #   O link do e-mail abre a página React de confirmação (FRONTEND_URL).
     scheme, domain = frontend_scheme_and_domain()
@@ -44,5 +44,5 @@ def send_verification_email(
                 "next_path": next_path,
             },
         ),
-        description="account.tasks.send_email_verification_email",
+        description="app_account.tasks.send_email_verification_email",
     )

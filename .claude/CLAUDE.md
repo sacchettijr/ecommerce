@@ -32,13 +32,22 @@ a goal here; verify in source first.
 
 **The repository root is the Django project root.** There is no
 `backend/` subdirectory — Django settings live at `PROJECT/settings/`,
-apps at the root (`account/`, `address/`, `core/`, `product/`), and
+apps at the root (`app_account/`, `app_address/`, `app_core/`, `app_product/`), and
 `requirements.txt`/`requirements-dev.txt`/`manage.py`/`pyproject.toml` are
 all at the repo root. (An earlier project layout did use a `backend/`
 prefix; it was removed — see `.claude/memory/known_issues.md` for the
 confirmed git evidence. If you see a `backend/`-prefixed path anywhere
 outside `.claude/`, it is stale documentation, not the real structure —
 flag it, don't follow it.)
+
+Each app's Python package is `app_`-prefixed (e.g. `app_account`), but its
+Django app **label** was deliberately preserved as the short original name
+(`account`, `address`, `core`, `product`) via an explicit `label =` on
+each `AppConfig` — this keeps migrations, `AUTH_USER_MODEL`, and
+`ContentType`/`Permission` rows valid. Only real Python import paths
+needed to change, not `app_label.ModelName`-style strings. See
+`.claude/context/structure.md`'s "Django apps" section for the full
+name/label table.
 
 See `.claude/context/structure.md` for the full, verified directory tree
 and the responsibility of every top-level directory and every file under
@@ -199,7 +208,7 @@ own stale README suggesting otherwise).
 
 Every new feature must include automated tests. See
 `.claude/context/testing.md` for the verified current state — in short:
-`address/` and `core/` have zero backend tests today, the frontend has
+`app_address/` and `app_core/` have zero backend tests today, the frontend has
 zero test infrastructure at all, and there is no CI. Do not assume
 coverage exists where that file says it doesn't.
 

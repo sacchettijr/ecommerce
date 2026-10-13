@@ -5,7 +5,8 @@ from django.utils.translation import (
 
 
 class AddressConfig(AppConfig):
-    name = "address"
+    name = "app_address"
+    label = "address"
     verbose_name = _(
         message="Address",
     )

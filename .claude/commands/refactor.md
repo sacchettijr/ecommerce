@@ -10,8 +10,8 @@ Rules for this command:
   existing tests that cover it before changing anything, so you have a
   baseline.
 - If the target has no test coverage today (check
-  `.claude/context/testing.md` — `address/` and `core/` currently have
-  none at all), add characterization tests for the current behavior
+  `.claude/context/testing.md` — `app_address/` and `app_core/` currently
+  have none at all), add characterization tests for the current behavior
   *before* refactoring, so the refactor is provably behavior-preserving.
 - Keep the change scoped to the refactor itself — do not mix in unrelated
   feature changes (per root `CLAUDE.md`: "avoid unrelated changes when

@@ -55,21 +55,21 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path(
         route="api/core/",
         view=include(
-            arg="core.urls",
+            arg="app_core.urls",
         ),
         name="url_core",
     ),
     path(
         route="api/account/",
         view=include(
-            arg="account.urls",
+            arg="app_account.urls",
         ),
         name="url_account",
     ),
     path(
         route="api/product/",
         view=include(
-            arg="product.urls",
+            arg="app_product.urls",
         ),
         name="url_product",
     ),

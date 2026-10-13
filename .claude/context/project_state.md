@@ -61,7 +61,7 @@ young, actively-evolving prototype, not a mature codebase).
 2. Reconcile the two divergent superuser-bootstrap mechanisms (weak
    fallback vs. strict) before this is ever deployed somewhere the
    `post_migrate` signal's fallback could fire unnoticed.
-3. Decide whether `address`/`UserAddressModel` get a real API + admin
+3. Decide whether `app_address`/`UserAddressModel` get a real API + admin
    wiring, or whether the existing dead forms should be removed.
 4. Fix the stale `backend/`-prefixed paths in `README.md` and
    `docs/render.md` (confirmed wrong — see `../memory/known_issues.md`).
