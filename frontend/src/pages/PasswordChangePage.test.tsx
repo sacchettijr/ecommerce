@@ -130,6 +130,108 @@ describe("PasswordChangePage", () => {
         ).toBeInTheDocument();
     });
 
+    it("shows a warning, not a success, when the new password matches the current one", async () => {
+        mockedChangePassword.mockRejectedValue(
+            new ApiError(400, {
+                non_field_errors: [
+                    "The new password must be different from your current password.",
+                ],
+                code: "password_unchanged",
+            }),
+        );
+        const user = userEvent.setup();
+
+        renderWithProviders(<PasswordChangePage />, {
+            user: makeSessionUser(),
+        });
+
+        await fillAndSubmit(user, { old: "SamePass1!", new1: "SamePass1!" });
+
+        const warning = await screen.findByRole("alert");
+        expect(warning).toHaveTextContent(
+            "The new password must be different from your current password.",
+        );
+        expect(
+            screen.queryByText("Your password has been changed successfully."),
+        ).not.toBeInTheDocument();
+    });
+
+    it("does not leave a stale duplicate success message after two consecutive successful changes", async () => {
+        mockedChangePassword.mockResolvedValue(undefined);
+        const user = userEvent.setup();
+
+        renderWithProviders(<PasswordChangePage />, {
+            user: makeSessionUser(),
+        });
+
+        await fillAndSubmit(user, { old: "First-Pass1!", new1: "Second-Pass2!" });
+        await screen.findByText("Your password has been changed successfully.");
+
+        await fillAndSubmit(user, { old: "Second-Pass2!", new1: "Third-Pass3!" });
+
+        expect(
+            await screen.findAllByText(
+                "Your password has been changed successfully.",
+            ),
+        ).toHaveLength(1);
+    });
+
+    it("removes a previous success message once the next submission fails with a field-level error", async () => {
+        const user = userEvent.setup();
+
+        renderWithProviders(<PasswordChangePage />, {
+            user: makeSessionUser(),
+        });
+
+        mockedChangePassword.mockResolvedValueOnce(undefined);
+        await fillAndSubmit(user, { old: "First-Pass1!", new1: "Second-Pass2!" });
+        await screen.findByText("Your password has been changed successfully.");
+
+        mockedChangePassword.mockRejectedValueOnce(
+            new ApiError(400, {
+                old_password: ["Your old password was entered incorrectly."],
+            }),
+        );
+        await fillAndSubmit(user, { old: "wrong", new1: "Third-Pass3!" });
+
+        await screen.findByText("Your old password was entered incorrectly.");
+        expect(
+            screen.queryByText("Your password has been changed successfully."),
+        ).not.toBeInTheDocument();
+    });
+
+    it("removes a previous success message once the next submission produces a warning", async () => {
+        const user = userEvent.setup();
+
+        renderWithProviders(<PasswordChangePage />, {
+            user: makeSessionUser(),
+        });
+
+        mockedChangePassword.mockResolvedValueOnce(undefined);
+        await fillAndSubmit(user, { old: "First-Pass1!", new1: "Second-Pass2!" });
+        await screen.findByText("Your password has been changed successfully.");
+
+        mockedChangePassword.mockRejectedValueOnce(
+            new ApiError(400, {
+                non_field_errors: [
+                    "The new password must be different from your current password.",
+                ],
+                code: "password_unchanged",
+            }),
+        );
+        await fillAndSubmit(user, {
+            old: "Second-Pass2!",
+            new1: "Second-Pass2!",
+        });
+
+        await screen.findByText(
+            "The new password must be different from your current password.",
+        );
+        expect(
+            screen.queryByText("Your password has been changed successfully."),
+        ).not.toBeInTheDocument();
+    });
+
     it("disables the submit button while the request is in flight", async () => {
         let resolveChange: () => void = () => {};
         mockedChangePassword.mockImplementation(

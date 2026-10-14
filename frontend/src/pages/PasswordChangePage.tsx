@@ -1,9 +1,9 @@
 import type { FormEvent } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 
 import { changePassword } from "../api/auth.ts";
 import { AccountLayout } from "../components/account/AccountLayout.tsx";
-import { Alert } from "../components/ui/Alert.tsx";
 import { SubmitButton } from "../components/ui/SubmitButton.tsx";
 import { TextField } from "../components/ui/TextField.tsx";
 import { textLinkClassName } from "../components/ui/linkClassNames.ts";
@@ -17,10 +17,33 @@ export function PasswordChangePage() {
     const { t } = useLanguage();
     const navigate = useNavigate();
     const form = useApiForm(emptyValues);
-    const { messages, addMessage, dismissMessage } = useMessages();
+    const { messages, beginAction, replaceMessages, dismissMessage } =
+        useMessages();
+    const actionRef = useRef(0);
+
+    // Routes useApiForm's own general-error state (the backend's "same password" code, or any
+    // other general/network error) into the shared notification area once it settles — reading
+    // it here, reactively, instead of right after awaiting form.submit() below, is what makes
+    // the token in actionRef.current reliably up to date for the action it belongs to.
+    useEffect(() => {
+        if (form.code === "password_unchanged") {
+            replaceMessages(actionRef.current, [
+                { variant: "warning", text: t.passwordChange.unchangedWarning },
+            ]);
+        } else if (form.generalErrors.length > 0) {
+            replaceMessages(
+                actionRef.current,
+                form.generalErrors.map((text) => ({
+                    variant: "error" as const,
+                    text,
+                })),
+            );
+        }
+    }, [form.code, form.generalErrors, replaceMessages, t]);
 
     const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        actionRef.current = beginAction();
 
         const changed = await form.submit(() =>
             changePassword(
@@ -33,7 +56,9 @@ export function PasswordChangePage() {
         if (changed) {
             // Never keep a just-submitted password sitting in form state once it succeeded.
             form.setValues(emptyValues);
-            addMessage("success", t.passwordChange.success);
+            replaceMessages(actionRef.current, [
+                { variant: "success", text: t.passwordChange.success },
+            ]);
         }
     };
 
@@ -48,12 +73,6 @@ export function PasswordChangePage() {
             </h1>
 
             <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-                {form.generalErrors.map((error) => (
-                    <Alert key={error} variant="error">
-                        {error}
-                    </Alert>
-                ))}
-
                 <form onSubmit={onSubmit} noValidate>
                     <TextField
                         name="old_password"

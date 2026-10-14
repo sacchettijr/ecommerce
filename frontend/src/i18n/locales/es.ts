@@ -222,6 +222,8 @@ export default {
         submit: "Guardar",
         submitting: "Guardando…",
         success: "Su contraseña se cambió correctamente.",
+        unchangedWarning:
+            "La nueva contraseña debe ser diferente de la contraseña actual.",
         cancel: "Cancelar",
     },
 } satisfies Translations;

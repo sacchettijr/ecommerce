@@ -224,6 +224,8 @@ export default {
         submit: "Enregistrer",
         submitting: "Enregistrement…",
         success: "Votre mot de passe a été changé avec succès.",
+        unchangedWarning:
+            "Le nouveau mot de passe doit être différent du mot de passe actuel.",
         cancel: "Annuler",
     },
 } satisfies Translations;

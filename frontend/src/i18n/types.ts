@@ -209,6 +209,7 @@ export interface Translations {
         submit: string;
         submitting: string;
         success: string;
+        unchangedWarning: string;
         cancel: string;
     };
 }

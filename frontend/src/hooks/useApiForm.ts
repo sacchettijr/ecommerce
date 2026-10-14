@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 
 import { ApiError } from "../api/client.ts";
@@ -70,14 +70,20 @@ export function useApiForm<V extends Record<string, string>>(initial: V) {
         }
     };
 
+    // Memoized so its reference only changes when the underlying messages/language actually
+    // change — a caller that uses it as a useEffect dependency would otherwise see a "new"
+    // array on every unrelated re-render (this was recomputed inline before) and loop forever.
+    const generalErrors = useMemo(
+        () => generalMessages.map((message) => resolveGeneralMessage(message, t)),
+        [generalMessages, t],
+    );
+
     return {
         values,
         setValues,
         onChange,
         fieldErrors,
-        generalErrors: generalMessages.map((message) =>
-            resolveGeneralMessage(message, t),
-        ),
+        generalErrors,
         code,
         submitting,
         submit,

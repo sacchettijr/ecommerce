@@ -222,6 +222,8 @@ export default {
         submit: "Save",
         submitting: "Saving…",
         success: "Your password has been changed successfully.",
+        unchangedWarning:
+            "The new password must be different from your current password.",
         cancel: "Cancel",
     },
 } satisfies Translations;

@@ -222,6 +222,7 @@ export default {
         submit: "Salvar",
         submitting: "Salvando…",
         success: "Sua senha foi alterada com sucesso.",
+        unchangedWarning: "A nova senha deve ser diferente da senha atual.",
         cancel: "Cancelar",
     },
 } satisfies Translations;

@@ -670,6 +670,74 @@ def test_password_change_with_wrong_current_password_is_a_field_error(client: Cl
     assert user.check_password(PASSWORD)
 
 
+def test_password_change_rejects_an_unchanged_password(client: Client) -> None:
+    user = make_user()
+    client.force_login(user)
+
+    response = post(
+        client,
+        "password-change",
+        {"old_password": PASSWORD, "new_password1": PASSWORD, "new_password2": PASSWORD},
+    )
+
+    body = response.json()
+    user.refresh_from_db()
+    assert response.status_code == 400
+    assert body["code"] == "password_unchanged"
+    assert body["non_field_errors"]
+    assert "old_password" not in body
+    assert "new_password1" not in body
+    assert user.check_password(PASSWORD)
+
+
+def test_password_change_unchanged_check_does_not_run_when_the_current_password_is_wrong(
+    client: Client,
+) -> None:
+    #   Bypasses the frontend entirely (direct API call): the wrong-current-password field
+    #   error must still be the only thing reported, with no "password_unchanged" code mixed in.
+    user = make_user()
+    client.force_login(user)
+
+    response = post(
+        client,
+        "password-change",
+        {
+            "old_password": "not-the-real-password",
+            "new_password1": PASSWORD,
+            "new_password2": PASSWORD,
+        },
+    )
+
+    body = response.json()
+    assert response.status_code == 400
+    assert body["old_password"]
+    assert "code" not in body
+
+
+def test_password_change_succeeds_after_a_rejected_unchanged_password_attempt(
+    client: Client,
+) -> None:
+    user = make_user()
+    client.force_login(user)
+
+    rejected = post(
+        client,
+        "password-change",
+        {"old_password": PASSWORD, "new_password1": PASSWORD, "new_password2": PASSWORD},
+    )
+    assert rejected.status_code == 400
+
+    accepted = post(
+        client,
+        "password-change",
+        {"old_password": PASSWORD, "new_password1": NEW_PASSWORD, "new_password2": NEW_PASSWORD},
+    )
+
+    user.refresh_from_db()
+    assert accepted.status_code == 200
+    assert user.check_password(NEW_PASSWORD)
+
+
 @pytest.mark.parametrize(
     ("password1", "password2"),
     [(NEW_PASSWORD, "different"), ("12345678", "12345678"), ("", "")],
