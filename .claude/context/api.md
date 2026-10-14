@@ -8,7 +8,7 @@ live schema/docs (not just installed — confirmed: `SpectacularAPIView`/
 | Path | Purpose |
 |---|---|
 | `/api/schema/`, `/api/schema/swagger/`, `/api/schema/redoc/` | OpenAPI schema and interactive docs (drf-spectacular) |
-| `/api/account/session/` | current session user + forces the CSRF cookie to be set |
+| `/api/account/session/` | current session user (`id`, `name`, `email`, `date_birth`, `phone`, `created_at`, `is_staff`) + forces the CSRF cookie to be set |
 | `/api/account/login/`, `/api/account/logout/` | session login/logout |
 | `/api/account/signup/` | registration |
 | `/api/account/email-verification/confirm/`, `/api/account/email-verification/resend/` | email verification flow |

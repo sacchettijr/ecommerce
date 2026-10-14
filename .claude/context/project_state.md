@@ -28,6 +28,14 @@ young, actively-evolving prototype, not a mature codebase).
   deliberately without Redis/RabbitMQ/Celery/CloudBeaver.
 - Frontend i18n: 5 languages, genuinely translated (not stubs), with a
   working language switcher.
+- Authenticated user area: `/profile` (route-guarded by
+  `ProtectedRoute.tsx`) renders the real logged-in user's `name`/`email`/
+  `date_birth`/`phone`/account-creation date, and `is_staff` only when
+  `true` — via the extended `/api/account/session/` payload, inside the
+  new reusable `AccountLayout` (sidebar + message/alert area). Other
+  sidebar/dropdown destinations (edit profile, change password, orders,
+  addresses, wishlist) remain inert placeholders — no pages exist for
+  them yet.
 
 ## Partially implemented
 
@@ -49,9 +57,12 @@ young, actively-evolving prototype, not a mature codebase).
   reachable by direct ORM/shell access (not even via Django admin, since
   there's no `UserAddressAdmin`).
 - **Automated CI** — no GitHub Actions, no pre-commit hooks, no Makefile.
-- **Frontend tests** — no framework installed, no test files.
-- **Route guarding** on the frontend — not needed yet (nothing to guard),
-  but will need to be built from scratch when it is.
+- **Frontend tests** — Vitest + React Testing Library installed
+  2026-10-13 (see `testing.md`), but only the authenticated account area
+  (`AccountLayout`/`ProfilePage`/`ProtectedRoute`, 14 tests) is covered;
+  everything else in the frontend still has zero tests.
+- **Route guarding** on the frontend — now exists (`ProtectedRoute.tsx`,
+  used by `/profile`), but only one real account page exists behind it.
 
 ## Immediate priorities (if asked "what's next," ground the answer here)
 

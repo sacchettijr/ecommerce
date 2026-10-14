@@ -49,12 +49,16 @@ export function UserMenu({ user, onCloseMobileMenu }: UserMenuProps) {
 
                 return (
                     <>
-                        {/* Perfil, pedidos, endereços e lista de desejos ainda não têm uma
-                            página própria: seguem o mesmo padrão do carrinho/lista de desejos
-                            do catálogo (ação reservada para quando existirem). */}
+                        {/* Pedidos, endereços e lista de desejos ainda não têm uma página
+                            própria: seguem o mesmo padrão reservado do carrinho/lista de
+                            desejos do catálogo (ação reservada para quando existirem). */}
                         <button
                             type="button"
                             role="menuitem"
+                            onClick={() => {
+                                closeAll();
+                                void navigate("/profile");
+                            }}
                             className={itemClassName}
                         >
                             {t.userMenu.profile}

@@ -51,13 +51,36 @@ that directory, just invoke its interpreter):
 
 ## Frontend
 
-**Zero test infrastructure exists** — confirmed definitively: no
-`vitest`/`jest`/`@testing-library/*`/`cypress`/`playwright` in
-`frontend/package.json`, no `.test.`/`.spec.` files anywhere under
-`frontend/src/`, no `test` script. Before adding frontend tests, you must
-choose and install a framework (Vitest + React Testing Library is the
-natural fit for this Vite + React stack, but this has not been decided by
-the project — raise it rather than assuming).
+**Vitest + React Testing Library**, installed 2026-10-13 (confirmed in
+`frontend/package.json`'s devDependencies: `vitest`, `jsdom`,
+`@testing-library/react`, `@testing-library/jest-dom`,
+`@testing-library/user-event`). Config lives in `vite.config.ts`'s `test`
+block (`environment: "jsdom"`, `setupFiles: ["./src/setupTests.ts"]`).
+`src/setupTests.ts` imports `@testing-library/jest-dom/vitest` (DOM
+matchers) and registers `afterEach(cleanup)` explicitly — `test.globals`
+is **not** enabled, so every test file imports `describe`/`it`/`expect`/
+etc. from `"vitest"` itself rather than relying on globals; keep doing
+that for new test files rather than turning `globals` on.
+
+- **Coverage so far**: only the authenticated account area —
+  `src/components/account/AccountLayout.test.tsx`,
+  `src/pages/ProfilePage.test.tsx`, `src/auth/ProtectedRoute.test.tsx` (14
+  tests total). Nothing else in the frontend has tests yet — this is a
+  start, not full coverage; don't assume other components/pages are
+  tested.
+- **Test helpers**: `src/test/renderWithProviders.tsx` (wraps a component
+  in `MemoryRouter` + `LanguageContext` + `AuthContext`, with a default
+  English `t` and an overridable `{ user, loading, route }`) and
+  `src/test/fixtures.ts` (`makeSessionUser()`). Both `AuthContext` and
+  `LanguageContext` have real default values (not `null`), so tests
+  provide context directly via `<SomeContext value={...}>` rather than
+  mocking modules or rendering the real `AuthProvider`/`LanguageProvider`
+  (which do real async/localStorage work) — follow this pattern for new
+  component tests that need auth/language state.
+- **Run with**: `docker exec ecommerce_frontend npx vitest run` (or
+  `npm run test` inside the container). Co-locate new test files next to
+  the component/page they cover (`Thing.tsx` → `Thing.test.tsx`) — no
+  separate `__tests__/` directory convention exists yet.
 
 ## CI
 

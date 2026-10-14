@@ -2,74 +2,65 @@
 
 ## Objective
 
-Complete a Django app rename migration — `core/`/`account/`/`product/`/
-`address/` had already been moved to `app_core/`/`app_account/`/
-`app_product/`/`app_address/` and `PROJECT/settings/apps.py` updated
-before this task started; the task was to fix every resulting broken
-reference, preserve Django app labels and database compatibility,
-validate, and update `.claude/` — requested 2026-10-13.
+Migrate the legacy Django-template authenticated-user experience
+(`frontend.old/accounts/profile_base.html`/`profile_detail.html`,
+reference only) to the current React frontend: a reusable authenticated
+layout, a profile home page showing real user data, route protection,
+and nav wiring — requested 2026-10-13.
 
-## Status: Complete
+## Status: Complete, including frontend tests and a follow-up live bug fix
 
-1. **Root cause found immediately**: each app's `apps.py` still declared
-   `name = "core"` (etc., the old bare name) instead of `name =
-   "app_core"`. Django resolves the app module to import from this class
-   attribute at startup, so the backend container failed to boot at all
-   (`ImproperlyConfigured: Cannot import 'core'`) before any other fix was
-   applied.
-2. Fixed `name =` on all 4 `AppConfig` classes to the new package path,
-   and added an explicit `label =` set to the **old** short name
-   (`core`/`account`/`product`/`address`) on each — preserving
-   `AUTH_USER_MODEL`, `ContentType`/`Permission` rows, and the pre-existing
-   migration files' `dependencies` tuples (which reference the old
-   labels) without any database rewrite.
-3. Fixed every real Python import path found via systematic grep across
-   the whole repo: model imports between apps, `app_product/apps.py`'s
-   `import_module()` signal registration, `PROJECT/urls.py`'s
-   `include()` calls, `AUTHENTICATION_BACKENDS`, `MIDDLEWARE`,
-   `REST_FRAMEWORK["DEFAULT_PAGINATION_CLASS"]`, `pyproject.toml`'s
-   `[tool.pyright] include` list, and a `unittest.mock.patch()` target
-   string in a test.
-4. Updated Celery task-name strings (`EMAIL_VERIFICATION_TASK`, the
-   `@shared_task(name=...)` it must match, and the matching test
-   assertions) to the new path — these are arbitrary dispatch-by-name
-   strings, not app-label references, so there was no compatibility
-   reason to keep them as `account.tasks...`.
-5. Deliberately left unchanged (confirmed these are `app_label.ModelName`
-   references, not Python import paths): `AUTH_USER_MODEL =
-   "account.UserModel"`, `UserAddressModel.user`'s `to="account.UserModel"`,
-   and the `"model": "address.countrymodel"`-style keys in `data/init_data_*.json`.
-6. Fixed one migration-caused documentation inaccuracy in `README.md`'s
-   structure tree (old directory names).
-7. Updated every affected `.claude/context/*.md`, `.claude/CLAUDE.md`, and
-   two `.claude/commands/*.md` files to use the new package names while
-   explicitly noting the preserved labels.
+1. Extended `/api/account/session/` (via `UserSerializer`) to expose
+   `date_birth`, `phone`, `created_at` — the only backend change,
+   reusing the existing single current-user endpoint instead of creating
+   a new one.
+2. Built `AccountLayout.tsx` (sidebar + content + message/alert area),
+   `ProfilePage.tsx` (consumes `useAuth().user` only), `ProtectedRoute.tsx`
+   (route guard), and `useMessages.ts` (reusable dismissible-message
+   queue), plus a small `Alert.tsx` extension and 4 new icons.
+3. Registered `/profile` in `App.tsx` behind `ProtectedRoute`; wired
+   `UserMenu.tsx`'s "Perfil" item to it.
+4. Added full translations (5 locales) for all new user-facing strings.
+5. Updated the one backend test whose exact session-payload assertion
+   needed the 3 new fields (plus a timezone-conversion fix to match
+   DRF's serialized offset).
 
 ## Validation performed
 
-`manage.py check`, `makemigrations --check --dry-run` (both clean — the
-pre-existing migration files in each app's `migrations/` directory were
-recognized as already matching current models, confirming label
-preservation worked), full `pytest` (104 passed, same count as before
-the migration), `ruff check`/`ruff format --check` (clean), `mypy`
-(clean), `basedpyright` (0 errors), and live HTTP checks through Nginx
-against all 4 apps' routes (`/api/core/health/`, `/api/product/products/`,
-`/api/account/session/`, `/admin/login/`) — all 200.
+Frontend: `tsc -b`, `eslint .`, `npm run build` — all clean.
+Backend: `manage.py check`, `makemigrations --check --dry-run` (no
+changes needed), full `pytest` (104 passed), `ruff check`/`ruff format
+--check`, `mypy`, `basedpyright` — all clean.
 
-Nginx itself briefly broke mid-task for an unrelated, already-known
-reason (its self-signed certificate volume had been cleared again) —
-fixed the same way as before; not part of this migration.
+## Frontend tests (installed after an initial "skip for now")
+
+Asked the user whether to install a frontend test framework (project had
+none) to cover the new `AccountLayout`/`ProfilePage`. The user initially
+chose to skip it, then asked for it to be added after all (same
+conversation, while reporting the live bug below). Installed Vitest +
+React Testing Library and wrote 14 tests covering `AccountLayout`,
+`ProfilePage`, and `ProtectedRoute` — see `changelog.md`/`testing.md`.
+Frontend test coverage elsewhere in the app is still zero.
+
+## Live bug found and fixed: blank `/profile` page
+
+User reported `https://177.222.210.50/profile` showing the navbar
+briefly then going blank. Root cause: `ecommerce_django` runs Gunicorn
+with no autoreload, so it kept serving the pre-extension `UserSerializer`
+(missing the 3 new fields) even though the source file was already
+correct — the long-running workers never picked up the earlier edit.
+`ProfilePage.tsx` assumed those fields always exist and threw rendering
+them, crashing the whole React tree (no error boundary). Fixed with
+`docker compose restart backend`; reproduced and verified the fix with a
+real Playwright/Edge session against the live site (throwaway test user,
+created and deleted via Django shell). See `known_issues.md` for the
+standing process gap this revealed (no backend autoreload).
 
 ## Not touched (out of scope for this task)
 
-- `app_address/fixtures/{country,city,state}.json` — pre-existing,
-  unrelated leftover fixture data (already correctly uses the preserved
-  `address.*` labels; superseded by `data/init_data_*.json`).
-- `locale/*/LC_MESSAGES/django.po` — the auto-generated `#:` location
-  comments still point at old file paths (e.g. `account/forms/LoginForm.py`).
-  Purely cosmetic (Django never reads these at runtime); fixing them
-  means running `makemessages` and risking unrelated catalog churn, so
-  left as a known cosmetic residual rather than touched speculatively.
-- The pre-existing "migrations not committed to git" issue
-  (`known_issues.md`) is unrelated to this migration and was not
-  affected by it either way — still confirmed true.
+- `frontend.old/` — read as reference only, never modified.
+- No new account pages were built for edit profile/change
+  password/orders/addresses/wishlist — those sidebar/dropdown items stay
+  inert, matching the project's existing treatment of the same items
+  elsewhere, since none of those pages exist yet.
+- No cart/checkout/order work — unrelated to this task.

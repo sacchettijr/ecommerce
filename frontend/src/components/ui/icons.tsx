@@ -109,6 +109,42 @@ export function ChevronRightIcon(props: SVGProps<SVGSVGElement>) {
     return <Icon shapes="m8.25 4.5 7.5 7.5-7.5 7.5" {...props} />;
 }
 
+export function UserIcon(props: SVGProps<SVGSVGElement>) {
+    return (
+        <Icon
+            shapes="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+            {...props}
+        />
+    );
+}
+
+export function PencilIcon(props: SVGProps<SVGSVGElement>) {
+    return (
+        <Icon
+            shapes="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"
+            {...props}
+        />
+    );
+}
+
+export function LockClosedIcon(props: SVGProps<SVGSVGElement>) {
+    return (
+        <Icon
+            shapes="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+            {...props}
+        />
+    );
+}
+
+export function ArchiveBoxIcon(props: SVGProps<SVGSVGElement>) {
+    return (
+        <Icon
+            shapes="M20.25 7.5l-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m6.75 3.75h3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5C21.75 4.254 21.246 3.75 20.625 3.75H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z"
+            {...props}
+        />
+    );
+}
+
 export function HeartIcon(props: SVGProps<SVGSVGElement>) {
     return (
         <Icon

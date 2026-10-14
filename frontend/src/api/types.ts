@@ -47,6 +47,11 @@ export interface SessionUser {
     id: number;
     name: string;
     email: string;
+    date_birth: string;
+    // String vazia quando não informado (PhoneNumberField normaliza, nunca é null).
+    phone: string;
+    // ISO 8601 com offset; pode ser null em registros muito antigos (campo nullable no backend).
+    created_at: string | null;
     // A segurança real continua no Django: isto só decide se a opção "Acesso ao admin"
     // aparece no menu, nunca se o usuário pode de fato acessar o admin.
     is_staff: boolean;

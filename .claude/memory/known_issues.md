@@ -94,8 +94,14 @@ needing further runtime verification.
     cart/wishlist/orders/profile UI elements are inert placeholders.
 13. **No CI/automation exists** (no `.github/workflows/`, no `Makefile`,
     no pre-commit hooks). All checks are run by hand.
-14. **Zero frontend test infrastructure** — no framework installed, no
-    test files, no `test` script.
+14. ~~**Zero frontend test infrastructure.**~~ **Partially resolved
+    2026-10-13.** Vitest + React Testing Library installed (see
+    `../context/testing.md`/`dependencies.md`), with 14 passing tests
+    covering `AccountLayout`/`ProfilePage`/`ProtectedRoute`. The project
+    had initially deferred this when asked during the same task, then
+    asked for it to be added after all. Everything else in the frontend
+    (every other page/component) still has zero test coverage — the
+    infrastructure exists now, but adoption is just starting.
 15. **`app_address/` and `app_core/` apps have zero backend tests.**
 16. **`.claude/commands/`, `.claude/context/`, `.claude/memory/` were all
     completely empty (0 bytes)** before this task — fixed as part of this
@@ -113,6 +119,28 @@ needing further runtime verification.
     `changelog.md` and `structure.md`'s "Django apps" section for the
     full name/label table and why the label was deliberately not
     renamed.
+
+18. **Backend container needs a manual restart after code changes —
+    forgetting this caused a real production-visible crash.** `ecommerce_django`
+    runs Gunicorn (`--workers 3`, no `--reload`), not `manage.py runserver`,
+    so editing Python source under the bind-mounted `/app` does **not**
+    take effect until the container is restarted. During the 2026-10-13
+    profile-page task, `UserSerializer.py` was extended to add
+    `date_birth`/`phone`/`created_at`, validated thoroughly via `docker exec
+    ... pytest`/shell (which run fresh processes and did pick up the
+    change) — but the long-running Gunicorn workers kept serving the old
+    3-field serializer. The frontend's new `ProfilePage.tsx` assumed those
+    fields always exist (per the `SessionUser` TS type) and threw
+    (`undefined.split(...)` in `parseDateBirth`) when they were silently
+    missing from the real `/api/account/session/` response, crashing the
+    whole React tree (no error boundary exists) into a blank white page
+    after the navbar briefly flashed — reported live at
+    `https://177.222.210.50/profile`. Fixed by `docker compose restart
+    backend`. Resolved for this specific incident, but the underlying
+    gap — no automatic reload, nothing enforces "restart after backend
+    edits" — is unresolved and will bite again for any future backend
+    change that isn't followed by an explicit restart. See
+    `architecture.md`.
 
 ## Lower-severity / cosmetic
 

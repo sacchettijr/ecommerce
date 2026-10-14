@@ -146,3 +146,130 @@ previous entry), then actually ran `manage.py loaddata` with all three
 files against the running database: all 5,650 objects installed with no
 error, counts matched (2 countries, 77 states, 5,571 cities), and
 `manage.py check` stayed clean. No fixture changes were needed or made.
+
+## 2026-10-13 — Authenticated user layout + profile home page
+
+Migrated the legacy Django-template authenticated-user experience
+(`frontend.old/accounts/profile_base.html`/`profile_detail.html`, read
+only, not modified) to the current React frontend, reusing existing
+architecture rather than inventing a new one.
+
+**Backend**: extended `app_account/api/serializers/UserSerializer.py`
+(the single current-user serializer, used by `SessionViewSet` at
+`/api/account/session/`) to also expose `date_birth`, `phone`,
+`created_at` (all read-only) — no new endpoint was created, per the
+explicit instruction to avoid duplicate user-state sources. Verified the
+exact serialized shape via Django shell (`phone` is always `""` when
+unset, never `null`; `created_at` can be `null` on old rows per the
+model's `null=True`).
+
+**Frontend**, all new unless noted:
+- `frontend/src/api/types.ts` (modified): `SessionUser` extended to match.
+- `frontend/src/components/ui/icons.tsx` (modified): added `UserIcon`,
+  `PencilIcon`, `LockClosedIcon`, `ArchiveBoxIcon`.
+- `frontend/src/components/ui/Alert.tsx` (modified): optional
+  `onDismiss`/`dismissLabel` pair (discriminated union, both-or-neither)
+  for dismissible alerts; existing callers unaffected.
+- `frontend/src/hooks/useMessages.ts`: small reusable per-page message
+  queue hook (`{ messages, addMessage, dismissMessage }`).
+- `frontend/src/auth/ProtectedRoute.tsx`: route guard reusing the
+  existing `withNext`/`safeNext` redirect-preservation convention;
+  redirects unauthenticated users to `/login?next=...`. The real
+  enforcement remains the backend requiring a session.
+- `frontend/src/components/account/AccountLayout.tsx`: reusable
+  authenticated-area layout — sidebar nav (reuses `userMenu.*`
+  translation keys/icons, only "Profile" is a real link; edit
+  profile/change password/orders/addresses/wishlist render as inert
+  items since no pages exist for them, matching `UserMenu.tsx`'s own
+  existing treatment of the same items) + content region + message/alert
+  area.
+- `frontend/src/pages/ProfilePage.tsx`: profile home page, rendered
+  inside `AccountLayout`, sourced only from `useAuth().user` (never a
+  client-supplied id). Shows name/email/date of birth/phone (or "not
+  provided")/account-creation date; `is_staff` renders a badge only when
+  `true` (nothing rendered when `false`). Handles the auth-loading state
+  and the defensive "no user" state (shouldn't normally occur, since the
+  route is guarded) without fabricating data.
+- `frontend/src/App.tsx` (modified): registered `path="profile"` wrapped
+  in `ProtectedRoute`.
+- `frontend/src/components/layout/UserMenu.tsx` (modified): wired the
+  "Perfil" dropdown item to navigate to `/profile` (previously inert);
+  the other items remain inert, unchanged.
+- `frontend/src/i18n/types.ts` + all 5 locale files (modified): added
+  `common.dismiss`, `account.navAriaLabel`, and the full `profile.*`
+  section — all 5 languages fully translated, not stubs.
+
+**Tests**: updated the one existing backend test asserting the exact
+`/api/account/session/` payload shape
+(`app_account/tests/api/test_auth_api.py::test_session_returns_the_logged_in_user`)
+to include the 3 new fields, converting `created_at` through
+`django.utils.timezone.localtime()` to match DRF's serialized offset
+(the in-memory model instance holds it in UTC; the API serializes it in
+the configured local timezone). No frontend tests were added —
+explicitly asked and the user chose to defer installing a frontend test
+framework rather than do so as part of this task (see
+`known_issues.md`).
+
+**Validation**: `tsc -b`, `eslint .`, `npm run build` (frontend);
+`manage.py check`, `makemigrations --check --dry-run` (no changes
+needed), full `pytest` (104 passed), `ruff check`/`ruff format --check`,
+`mypy`, `basedpyright` (backend) — all clean.
+
+## 2026-10-13 — Fixed a live blank-screen bug on `/profile`
+
+The user reported `https://177.222.210.50/profile` showing the navbar
+briefly, then going blank. Root cause: `ecommerce_django` runs Gunicorn
+with no autoreload (see `architecture.md`), so it kept serving the
+pre-extension `UserSerializer` (missing `date_birth`/`phone`/`created_at`)
+even though the source file on disk was already correct — `docker exec
+... pytest`/shell checks run fresh processes and didn't surface this,
+since only the long-running Gunicorn workers were stale. The frontend
+trusted those fields to always be present (per the `SessionUser` type)
+and threw inside `ProfilePage.tsx`'s `parseDateBirth` when they were
+silently absent, crashing the whole React tree (no error boundary
+exists) into a blank page. Fixed with `docker compose restart backend`.
+Reproduced the failure and verified the fix end-to-end with a real
+Playwright (Edge) browser session against the live `https://177.222.210.50`
+site, logging in as a throwaway test user (created and deleted via
+Django shell) and confirming `/profile` now renders every field with no
+console/page errors. See `known_issues.md` for the standing process gap
+(no automatic reload — any future backend change needs an explicit
+restart).
+
+## 2026-10-13 — Installed Vitest + React Testing Library, tests for the account area
+
+Asked the user whether to install a frontend test framework for the new
+`AccountLayout`/`ProfilePage` (the project had none); the user initially
+said to skip it, then asked for it after all once the blank-screen bug
+above was being investigated.
+
+Installed `vitest`/`jsdom`/`@testing-library/{react,jest-dom,user-event}`
+as frontend devDependencies (`npm install`, then `npm audit fix` for an
+unrelated pre-existing transitive `source-map-js` advisory shared by
+`vite`/`@tailwindcss/vite` — a safe patch bump, no major-version change).
+Added a `test` script (`vitest run`) and a `test` block to
+`vite.config.ts` (`environment: "jsdom"`, `setupFiles:
+["./src/setupTests.ts"]`). `src/setupTests.ts` wires up
+`@testing-library/jest-dom`'s matchers and an explicit
+`afterEach(cleanup)` — `test.globals` was deliberately left off, so every
+test file imports `describe`/`it`/`expect` from `"vitest"` directly.
+
+Added `src/test/renderWithProviders.tsx` and `src/test/fixtures.ts`
+(`makeSessionUser()`) as reusable test helpers — they provide
+`AuthContext`/`LanguageContext` values directly (both have real default
+context values, not `null`) rather than mocking modules or rendering the
+real providers.
+
+Wrote 14 tests: `AccountLayout.test.tsx` (nav items present, inert
+sidebar entries have no destination yet, admin link only for staff,
+children render, message display + dismiss), `ProfilePage.test.tsx`
+(loading state, defensive no-user error state without fabricated data,
+all required fields render with the authenticated user's own values,
+phone "not provided" vs. set, `is_staff` badge shown only when `true`,
+no other user's data ever rendered), `ProtectedRoute.test.tsx` (loading
+renders nothing, unauthenticated redirects to login, authenticated
+renders the protected children).
+
+Verified: all 14 tests pass, `tsc -b` clean, `eslint .` clean, `npm run
+build` output size unchanged (test files correctly excluded from the
+production bundle).

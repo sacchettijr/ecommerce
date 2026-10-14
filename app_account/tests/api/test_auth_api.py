@@ -1,5 +1,6 @@
 import re
 from collections.abc import Iterator
+from datetime import date, datetime
 from typing import Any, cast
 from unittest.mock import patch
 
@@ -10,6 +11,7 @@ from django.core import mail
 from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.test import Client
+from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
@@ -146,11 +148,15 @@ def test_session_returns_the_logged_in_user(client: Client) -> None:
     client.force_login(user)
 
     payload = client.get(f"{BASE}/session/").json()
+    created_at = cast("datetime | None", user.created_at)
 
     assert payload["user"] == {
         "id": user.pk,
         "name": cast(str, user.name),
         "email": email_of(user),
+        "date_birth": cast(date, user.date_birth).isoformat(),
+        "phone": str(cast(Any, user.phone)),
+        "created_at": timezone.localtime(created_at).isoformat() if created_at else None,
         "is_staff": False,
     }
     assert "password" not in payload["user"]

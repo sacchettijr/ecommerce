@@ -3,6 +3,7 @@ import type { Translations } from "../types.ts";
 export default {
     common: {
         loading: "Cargando…",
+        dismiss: "Cerrar",
     },
     nav: {
         home: "Inicio",
@@ -198,5 +199,20 @@ export default {
         addresses: "Mis direcciones",
         wishlist: "Lista de deseos",
         admin: "Acceso al admin",
+    },
+    account: {
+        navAriaLabel: "Navegación de la cuenta",
+    },
+    profile: {
+        title: "Mi perfil | E-Commerce",
+        heading: "Mi perfil",
+        nameLabel: "Nombre",
+        emailLabel: "Correo electrónico",
+        dateBirthLabel: "Fecha de nacimiento",
+        phoneLabel: "Teléfono",
+        notProvided: "No proporcionado",
+        memberSinceLabel: "Miembro desde",
+        staffBadge: "Cuenta del equipo",
+        loadError: "No se pudo cargar tu perfil. Inténtalo de nuevo.",
     },
 } satisfies Translations;

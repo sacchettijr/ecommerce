@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router";
 
+import { ProtectedRoute } from "./auth/ProtectedRoute.tsx";
 import { Layout } from "./components/layout/Layout.tsx";
 import { ContactPage } from "./pages/ContactPage.tsx";
 import { EmailVerificationConfirmPage } from "./pages/EmailVerificationConfirmPage.tsx";
@@ -13,6 +14,7 @@ import { PasswordResetDonePage } from "./pages/PasswordResetDonePage.tsx";
 import { PasswordResetPage } from "./pages/PasswordResetPage.tsx";
 import { ProductDetailPage } from "./pages/ProductDetailPage.tsx";
 import { ProductListPage } from "./pages/ProductListPage.tsx";
+import { ProfilePage } from "./pages/ProfilePage.tsx";
 import { SignupPage } from "./pages/SignupPage.tsx";
 
 function App() {
@@ -27,6 +29,14 @@ function App() {
                 <Route path="login" element={<LoginPage />} />
                 <Route path="signup" element={<SignupPage />} />
                 <Route path="logged-out" element={<LoggedOutPage />} />
+                <Route
+                    path="profile"
+                    element={
+                        <ProtectedRoute>
+                            <ProfilePage />
+                        </ProtectedRoute>
+                    }
+                />
                 <Route
                     path="email-verification/:uid/:token"
                     element={<EmailVerificationConfirmPage />}

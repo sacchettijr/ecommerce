@@ -1,6 +1,7 @@
 export interface Translations {
     common: {
         loading: string;
+        dismiss: string;
     };
     nav: {
         home: string;
@@ -185,5 +186,20 @@ export interface Translations {
         addresses: string;
         wishlist: string;
         admin: string;
+    };
+    account: {
+        navAriaLabel: string;
+    };
+    profile: {
+        title: string;
+        heading: string;
+        nameLabel: string;
+        emailLabel: string;
+        dateBirthLabel: string;
+        phoneLabel: string;
+        notProvided: string;
+        memberSinceLabel: string;
+        staffBadge: string;
+        loadError: string;
     };
 }

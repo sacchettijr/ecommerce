@@ -55,14 +55,16 @@ Dependencies: `@tailwindcss/vite` ^4.3.3, `react`/`react-dom` ^19.2.8,
 
 Dev dependencies: `@babel/core`, `@eslint/js`, `@rolldown/plugin-babel`
 (runs the React Compiler Babel preset through Vite's Rolldown pipeline),
-`@types/*`, `@vitejs/plugin-react` ^6.1.1, `babel-plugin-react-compiler`
-^1.0.0, `eslint` ^10.10.0, `eslint-plugin-react-hooks`,
-`eslint-plugin-react-refresh`, `globals`, `typescript` ~6.0.2,
-`typescript-eslint`, `vite` ^8.3.0.
+`@testing-library/jest-dom` ^7.0.1, `@testing-library/react` ^16.3.3,
+`@testing-library/user-event` ^14.6.8, `@types/*`, `@vitejs/plugin-react`
+^6.1.1, `babel-plugin-react-compiler` ^1.0.0, `eslint` ^10.10.0,
+`eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `globals`,
+`jsdom` ^30.1.2, `typescript` ~6.0.2, `typescript-eslint`, `vite` ^8.3.0,
+`vitest` ^5.0.4 (added 2026-10-13 — see `testing.md`).
 
-**No state-management library, no data-fetching library, no test
-framework** are installed on the frontend — confirmed absent, not an
-oversight to silently "fix" by adding one without being asked.
+**No state-management library, no data-fetching library** are installed
+on the frontend — confirmed absent, not an oversight to silently "fix" by
+adding one without being asked.
 
 ## Dependency-management conventions
 
