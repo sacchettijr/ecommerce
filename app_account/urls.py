@@ -8,6 +8,7 @@ from app_account.api.viewsets import (
     EmailVerificationViewSet,
     LoginViewSet,
     LogoutViewSet,
+    PasswordChangeViewSet,
     PasswordResetViewSet,
     SessionViewSet,
     SignUpViewSet,
@@ -44,6 +45,11 @@ router.register(
     prefix="password-reset",
     viewset=PasswordResetViewSet,
     basename="password_reset",
+)
+router.register(
+    prefix="password-change",
+    viewset=PasswordChangeViewSet,
+    basename="password_change",
 )
 
 urlpatterns: list[URLPattern | URLResolver] = [

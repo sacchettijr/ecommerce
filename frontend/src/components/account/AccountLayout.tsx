@@ -68,10 +68,18 @@ export function AccountLayout({
                                 <PencilIcon className="size-5 shrink-0" />
                                 {t.userMenu.editProfile}
                             </span>
-                            <span className={reservedNavItemClassName}>
+                            <NavLink
+                                to="/profile/password"
+                                end
+                                className={({ isActive }) =>
+                                    isActive
+                                        ? activeNavItemClassName
+                                        : inactiveNavItemClassName
+                                }
+                            >
                                 <LockClosedIcon className="size-5 shrink-0" />
                                 {t.userMenu.changePassword}
-                            </span>
+                            </NavLink>
                             <span className={reservedNavItemClassName}>
                                 <ArchiveBoxIcon className="size-5 shrink-0" />
                                 {t.userMenu.orders}

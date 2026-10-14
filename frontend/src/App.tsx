@@ -12,6 +12,7 @@ import { PasswordResetCompletePage } from "./pages/PasswordResetCompletePage.tsx
 import { PasswordResetConfirmPage } from "./pages/PasswordResetConfirmPage.tsx";
 import { PasswordResetDonePage } from "./pages/PasswordResetDonePage.tsx";
 import { PasswordResetPage } from "./pages/PasswordResetPage.tsx";
+import { PasswordChangePage } from "./pages/PasswordChangePage.tsx";
 import { ProductDetailPage } from "./pages/ProductDetailPage.tsx";
 import { ProductListPage } from "./pages/ProductListPage.tsx";
 import { ProfilePage } from "./pages/ProfilePage.tsx";
@@ -34,6 +35,14 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <ProfilePage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="profile/password"
+                    element={
+                        <ProtectedRoute>
+                            <PasswordChangePage />
                         </ProtectedRoute>
                     }
                 />

@@ -111,6 +111,7 @@ export default {
         phonePlaceholder: "(11) 98765-4321",
         password1Label: "Password",
         password2Label: "Confirm password",
+        currentPasswordLabel: "Current password",
         newPasswordLabel: "New password",
         confirmNewPasswordLabel: "Confirm new password",
         login: {
@@ -214,5 +215,13 @@ export default {
         memberSinceLabel: "Member since",
         staffBadge: "Staff account",
         loadError: "Could not load your profile. Please try again.",
+    },
+    passwordChange: {
+        title: "Change password | E-Commerce",
+        heading: "Change password",
+        submit: "Save",
+        submitting: "Saving…",
+        success: "Your password has been changed successfully.",
+        cancel: "Cancel",
     },
 } satisfies Translations;

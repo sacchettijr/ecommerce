@@ -111,6 +111,7 @@ export default {
         phonePlaceholder: "(11) 98765-4321",
         password1Label: "Senha",
         password2Label: "Confirme a senha",
+        currentPasswordLabel: "Senha atual",
         newPasswordLabel: "Nova senha",
         confirmNewPasswordLabel: "Confirme a nova senha",
         login: {
@@ -214,5 +215,13 @@ export default {
         memberSinceLabel: "Membro desde",
         staffBadge: "Conta da equipe",
         loadError: "Não foi possível carregar seu perfil. Tente novamente.",
+    },
+    passwordChange: {
+        title: "Alterar senha | E-Commerce",
+        heading: "Alterar senha",
+        submit: "Salvar",
+        submitting: "Salvando…",
+        success: "Sua senha foi alterada com sucesso.",
+        cancel: "Cancelar",
     },
 } satisfies Translations;

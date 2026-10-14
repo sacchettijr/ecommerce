@@ -106,6 +106,7 @@ export interface Translations {
         phonePlaceholder: string;
         password1Label: string;
         password2Label: string;
+        currentPasswordLabel: string;
         newPasswordLabel: string;
         confirmNewPasswordLabel: string;
         login: {
@@ -201,5 +202,13 @@ export interface Translations {
         memberSinceLabel: string;
         staffBadge: string;
         loadError: string;
+    };
+    passwordChange: {
+        title: string;
+        heading: string;
+        submit: string;
+        submitting: string;
+        success: string;
+        cancel: string;
     };
 }

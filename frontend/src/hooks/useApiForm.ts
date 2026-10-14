@@ -72,6 +72,7 @@ export function useApiForm<V extends Record<string, string>>(initial: V) {
 
     return {
         values,
+        setValues,
         onChange,
         fieldErrors,
         generalErrors: generalMessages.map((message) =>

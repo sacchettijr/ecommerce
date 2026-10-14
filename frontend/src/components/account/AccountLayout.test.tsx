@@ -24,7 +24,20 @@ describe("AccountLayout", () => {
         expect(screen.getByText("Profile content")).toBeInTheDocument();
     });
 
-    it("renders the other account items as inert (no destination yet)", () => {
+    it("links to the password change page", () => {
+        renderWithProviders(
+            <AccountLayout title="Account">
+                <p>Profile content</p>
+            </AccountLayout>,
+            { user: makeSessionUser() },
+        );
+
+        expect(
+            screen.getByRole("link", { name: /change password/i }),
+        ).toHaveAttribute("href", "/profile/password");
+    });
+
+    it("renders the remaining account items as inert (no destination yet)", () => {
         renderWithProviders(
             <AccountLayout title="Account">
                 <p>Profile content</p>
@@ -36,7 +49,6 @@ describe("AccountLayout", () => {
             screen.queryByRole("link", { name: /edit profile/i }),
         ).not.toBeInTheDocument();
         expect(screen.getByText("Edit profile")).toBeInTheDocument();
-        expect(screen.getByText("Change password")).toBeInTheDocument();
         expect(screen.getByText("My orders")).toBeInTheDocument();
         expect(screen.getByText("My addresses")).toBeInTheDocument();
         expect(screen.getByText("Wishlist")).toBeInTheDocument();

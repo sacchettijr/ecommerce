@@ -24,6 +24,7 @@ REST_FRAMEWORK = {
         "signup": "10/hour",
         "email_verification": "5/hour",
         "password_reset": "5/hour",
+        "password_change": "10/hour",
         "token_check": "60/hour",
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

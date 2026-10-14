@@ -96,3 +96,17 @@ export function confirmPasswordReset(
         new_password2: newPassword2,
     });
 }
+
+// Always operates on the authenticated session's own user — the backend never accepts a
+// user identifier here, so this can never target another account.
+export function changePassword(
+    oldPassword: string,
+    newPassword1: string,
+    newPassword2: string,
+): Promise<void> {
+    return apiPost<void>("/account/password-change/", {
+        old_password: oldPassword,
+        new_password1: newPassword1,
+        new_password2: newPassword2,
+    });
+}

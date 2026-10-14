@@ -178,6 +178,22 @@ def test_session_and_login_report_is_staff_so_the_frontend_can_show_the_admin_li
     assert session_payload["user"]["is_staff"] is is_staff
 
 
+def test_session_never_exposes_another_users_data_even_with_a_user_id_query_param(
+    client: Client,
+) -> None:
+    #   Security requirement: the endpoint only ever resolves request.user from the session —
+    #   it must not honor a client-supplied identifier for whose data to return.
+    user = make_user()
+    other_user = make_user()
+    client.force_login(user)
+
+    response = client.get(f"{BASE}/session/?id={other_user.pk}&user={other_user.pk}")
+
+    body = response.json()["user"]
+    assert body["id"] == user.pk
+    assert body["email"] == email_of(user)
+
+
 def test_post_without_csrf_token_is_rejected() -> None:
     strict = Client(enforce_csrf_checks=True)
 
@@ -599,6 +615,141 @@ def test_password_reset_confirm_with_invalid_link(client: Client) -> None:
 
     assert response.status_code == 400
     assert response.json()["code"] == "invalid_link"
+
+
+# ---------------------------------------------------------- password change
+
+
+def test_password_change_requires_authentication(client: Client) -> None:
+    response = post(
+        client,
+        "password-change",
+        {"old_password": PASSWORD, "new_password1": NEW_PASSWORD, "new_password2": NEW_PASSWORD},
+    )
+
+    assert response.status_code == 403
+
+
+def test_password_change_success_updates_the_password_and_keeps_the_session(
+    client: Client,
+) -> None:
+    user = make_user()
+    client.force_login(user)
+
+    response = post(
+        client,
+        "password-change",
+        {"old_password": PASSWORD, "new_password1": NEW_PASSWORD, "new_password2": NEW_PASSWORD},
+    )
+
+    user.refresh_from_db()
+    assert response.status_code == 200
+    assert user.check_password(NEW_PASSWORD)
+    #   update_session_auth_hash must keep the session valid after the hash changes.
+    assert client.get(f"{BASE}/session/").json()["user"]["id"] == user.pk
+
+
+def test_password_change_with_wrong_current_password_is_a_field_error(client: Client) -> None:
+    user = make_user()
+    client.force_login(user)
+
+    response = post(
+        client,
+        "password-change",
+        {
+            "old_password": "not-the-real-password",
+            "new_password1": NEW_PASSWORD,
+            "new_password2": NEW_PASSWORD,
+        },
+    )
+
+    body = response.json()
+    user.refresh_from_db()
+    assert response.status_code == 400
+    assert body["old_password"]
+    assert user.check_password(PASSWORD)
+
+
+@pytest.mark.parametrize(
+    ("password1", "password2"),
+    [(NEW_PASSWORD, "different"), ("12345678", "12345678"), ("", "")],
+)
+def test_password_change_field_errors_for_invalid_new_password(
+    client: Client, password1: str, password2: str
+) -> None:
+    user = make_user()
+    client.force_login(user)
+
+    response = post(
+        client,
+        "password-change",
+        {"old_password": PASSWORD, "new_password1": password1, "new_password2": password2},
+    )
+
+    body = response.json()
+    user.refresh_from_db()
+    assert response.status_code == 400
+    assert body.get("new_password1") or body.get("new_password2")
+    assert user.check_password(PASSWORD)
+
+
+def test_password_change_ignores_any_user_identifier_in_the_payload(client: Client) -> None:
+    #   Security requirement: the endpoint must only ever act on request.user, never on an
+    #   id/email supplied by the client, even if one is present in the request body.
+    user = make_user()
+    other_user = make_user()
+    client.force_login(user)
+
+    response = post(
+        client,
+        "password-change",
+        {
+            "old_password": PASSWORD,
+            "new_password1": NEW_PASSWORD,
+            "new_password2": NEW_PASSWORD,
+            "id": other_user.pk,
+            "email": email_of(other_user),
+        },
+    )
+
+    user.refresh_from_db()
+    other_user.refresh_from_db()
+    assert response.status_code == 200
+    assert user.check_password(NEW_PASSWORD)
+    assert other_user.check_password(PASSWORD)
+
+
+def test_password_change_requires_csrf() -> None:
+    strict = Client(enforce_csrf_checks=True)
+    strict.force_login(make_user())
+
+    response = strict.post(
+        f"{BASE}/password-change/",
+        data={
+            "old_password": PASSWORD,
+            "new_password1": NEW_PASSWORD,
+            "new_password2": NEW_PASSWORD,
+        },
+        content_type="application/json",
+    )
+
+    assert response.status_code == 403
+
+
+def test_password_change_is_throttled(client: Client) -> None:
+    client.force_login(make_user())
+
+    statuses = [
+        post(
+            client,
+            "password-change",
+            {"old_password": "wrong", "new_password1": NEW_PASSWORD, "new_password2": NEW_PASSWORD},
+        ).status_code
+        for _ in range(11)
+    ]
+
+    assert statuses[:10] == [400] * 10
+    assert statuses[10] == 429
 
 
 # ---------------------------------------------------------- django admin (is_staff)

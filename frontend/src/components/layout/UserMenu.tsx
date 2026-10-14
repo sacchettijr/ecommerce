@@ -73,6 +73,10 @@ export function UserMenu({ user, onCloseMobileMenu }: UserMenuProps) {
                         <button
                             type="button"
                             role="menuitem"
+                            onClick={() => {
+                                closeAll();
+                                void navigate("/profile/password");
+                            }}
                             className={itemClassName}
                         >
                             {t.userMenu.changePassword}
