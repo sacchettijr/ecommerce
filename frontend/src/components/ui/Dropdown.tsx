@@ -42,13 +42,13 @@ export function Dropdown({ label, children, align = "left" }: DropdownProps) {
     }, [open]);
 
     return (
-        <div ref={containerRef} className="relative">
+        <div ref={containerRef} className="relative inline-block">
             <button
                 type="button"
                 aria-expanded={open}
                 aria-haspopup="menu"
                 onClick={() => setOpen((current) => !current)}
-                className="flex w-full items-center gap-1 rounded px-3 py-2 text-gray-300 hover:text-white"
+                className="flex items-center gap-1 rounded px-3 py-2 text-gray-300 hover:text-white"
             >
                 {label}
                 <ChevronDownIcon
@@ -59,8 +59,11 @@ export function Dropdown({ label, children, align = "left" }: DropdownProps) {
             {open && (
                 <div
                     role="menu"
-                    className={`z-20 mt-1 w-full overflow-hidden rounded-lg bg-white py-1 text-gray-800 shadow-lg ring-1 ring-black/5 md:absolute md:w-56 ${
-                        align === "right" ? "md:right-0" : "md:left-0"
+                    className={`absolute left-0 z-20 mt-1 w-56 overflow-hidden rounded-lg bg-white py-1 text-gray-800 shadow-lg ring-1 ring-black/5 ${
+                        //   "right" só se aplica a partir do lg: nas telas menores o botão fica
+                        //   colado à esquerda do painel (empilhado), então ancorar à direita
+                        //   jogaria o menu pra fora da tela à esquerda.
+                        align === "right" ? "lg:left-auto lg:right-0" : ""
                     }`}
                 >
                     {children(() => setOpen(false))}

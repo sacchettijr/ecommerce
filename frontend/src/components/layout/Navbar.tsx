@@ -160,7 +160,7 @@ export function Navbar() {
                         </button>
                     </form>
 
-                    <ul className="flex items-center gap-1 lg:gap-0">
+                    <ul className="mt-2 flex flex-col gap-1 border-t border-gray-800 pt-2 lg:mt-0 lg:flex-row lg:items-center lg:gap-0 lg:border-0 lg:pt-0">
                         <li>
                             <LanguagePicker />
                         </li>
