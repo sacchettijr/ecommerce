@@ -15,6 +15,7 @@ import { PasswordResetPage } from "./pages/PasswordResetPage.tsx";
 import { PasswordChangePage } from "./pages/PasswordChangePage.tsx";
 import { ProductDetailPage } from "./pages/ProductDetailPage.tsx";
 import { ProductListPage } from "./pages/ProductListPage.tsx";
+import { ProfileEditPage } from "./pages/ProfileEditPage.tsx";
 import { ProfilePage } from "./pages/ProfilePage.tsx";
 import { SignupPage } from "./pages/SignupPage.tsx";
 
@@ -35,6 +36,14 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <ProfilePage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="profile/edit"
+                    element={
+                        <ProtectedRoute>
+                            <ProfileEditPage />
                         </ProtectedRoute>
                     }
                 />

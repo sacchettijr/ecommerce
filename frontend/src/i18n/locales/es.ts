@@ -226,4 +226,12 @@ export default {
             "La nueva contraseña debe ser diferente de la contraseña actual.",
         cancel: "Cancelar",
     },
+    profileEdit: {
+        title: "Editar perfil | E-Commerce",
+        heading: "Editar perfil",
+        submit: "Actualizar perfil",
+        submitting: "Guardando…",
+        success: "Su perfil se actualizó correctamente.",
+        cancel: "Cancelar",
+    },
 } satisfies Translations;

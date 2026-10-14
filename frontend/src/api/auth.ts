@@ -110,3 +110,19 @@ export function changePassword(
         new_password2: newPassword2,
     });
 }
+
+export interface ProfileUpdatePayload {
+    name: string;
+    date_birth: string;
+    phone: string;
+}
+
+// Same session/no-user-id rule as changePassword above. Returns the fresh SessionUser so the
+// caller can refresh AuthContext directly from the response, without a second request.
+export async function updateProfile(
+    payload: ProfileUpdatePayload,
+): Promise<SessionUser> {
+    const data = await apiPost<UserResponse>("/account/profile/", payload);
+
+    return data.user;
+}

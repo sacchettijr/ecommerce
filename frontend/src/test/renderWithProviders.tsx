@@ -13,13 +13,19 @@ interface RenderOptions {
     user?: SessionUser | null;
     loading?: boolean;
     route?: string;
+    setUser?: (user: SessionUser | null) => void;
 }
 
 export function renderWithProviders(
     ui: ReactElement,
-    { user = null, loading = false, route = "/" }: RenderOptions = {},
+    {
+        user = null,
+        loading = false,
+        route = "/",
+        setUser = () => {},
+    }: RenderOptions = {},
 ) {
-    const authValue: AuthState = { user, loading, setUser: () => {} };
+    const authValue: AuthState = { user, loading, setUser };
 
     return render(
         <MemoryRouter initialEntries={[route]}>

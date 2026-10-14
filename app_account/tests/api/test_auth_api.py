@@ -820,6 +820,142 @@ def test_password_change_is_throttled(client: Client) -> None:
     assert statuses[10] == 429
 
 
+# ---------------------------------------------------------- profile update
+
+
+def test_profile_update_requires_authentication(client: Client) -> None:
+    response = post(
+        client,
+        "profile",
+        {"name": "New Name", "date_birth": "1985-05-05", "phone": ""},
+    )
+
+    assert response.status_code == 403
+
+
+def test_profile_update_success_updates_the_allowed_fields(client: Client) -> None:
+    user = make_user(name="Original Name", phone="")
+    client.force_login(user)
+
+    response = post(
+        client,
+        "profile",
+        {"name": "Updated Name", "date_birth": "1985-05-05", "phone": "11987654321"},
+    )
+
+    body = response.json()
+    user.refresh_from_db()
+    assert response.status_code == 200
+    assert cast(str, user.name) == "Updated Name"
+    assert str(cast(date, user.date_birth)) == "1985-05-05"
+    assert str(cast(Any, user.phone)) == "+5511987654321"
+    assert body["user"]["name"] == "Updated Name"
+    assert body["user"]["date_birth"] == "1985-05-05"
+    assert body["user"]["phone"] == "+5511987654321"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("name", "Ab"), ("date_birth", ""), ("date_birth", "not-a-date")],
+)
+def test_profile_update_field_errors_for_invalid_values(
+    client: Client, field: str, value: str
+) -> None:
+    user = make_user(name="Original Name")
+    client.force_login(user)
+    data = {"name": "Original Name", "date_birth": str(cast(date, user.date_birth)), "phone": ""}
+    data[field] = value
+
+    response = post(client, "profile", data)
+
+    body = response.json()
+    user.refresh_from_db()
+    assert response.status_code == 400
+    assert body[field]
+    assert cast(str, user.name) == "Original Name"
+
+
+def test_profile_update_ignores_protected_fields(client: Client) -> None:
+    user = make_user(name="Original Name", is_staff=False)
+    client.force_login(user)
+
+    response = post(
+        client,
+        "profile",
+        {
+            "name": "Updated Name",
+            "date_birth": str(cast(date, user.date_birth)),
+            "phone": "",
+            "is_staff": True,
+            "is_superuser": True,
+            "is_active": False,
+            "email": "hijacked@example.com",
+        },
+    )
+
+    user.refresh_from_db()
+    assert response.status_code == 200
+    assert cast(str, user.name) == "Updated Name"
+    assert cast(bool, user.is_staff) is False
+    assert user.is_superuser is False
+    assert user.is_active is True
+    assert email_of(user) != "hijacked@example.com"
+
+
+def test_profile_update_ignores_any_user_identifier_in_the_payload(client: Client) -> None:
+    #   Security requirement: the endpoint must only ever act on request.user, never on an
+    #   id/email supplied by the client, even if one is present in the request body.
+    user = make_user(name="User One")
+    other_user = make_user(name="User Two")
+    client.force_login(user)
+
+    response = post(
+        client,
+        "profile",
+        {
+            "name": "Updated Name",
+            "date_birth": str(cast(date, user.date_birth)),
+            "phone": "",
+            "id": other_user.pk,
+        },
+    )
+
+    user.refresh_from_db()
+    other_user.refresh_from_db()
+    assert response.status_code == 200
+    assert cast(str, user.name) == "Updated Name"
+    assert cast(str, other_user.name) == "User Two"
+
+
+def test_profile_update_skips_the_write_when_nothing_changed(client: Client) -> None:
+    user = make_user(name="Original Name", phone="")
+    client.force_login(user)
+    updated_at_before = cast("datetime | None", user.updated_at)
+
+    response = post(
+        client,
+        "profile",
+        {"name": "Original Name", "date_birth": str(cast(date, user.date_birth)), "phone": ""},
+    )
+
+    user.refresh_from_db()
+    assert response.status_code == 200
+    assert cast("datetime | None", user.updated_at) == updated_at_before
+
+
+def test_profile_update_requires_csrf() -> None:
+    strict = Client(enforce_csrf_checks=True)
+    strict.force_login(make_user())
+
+    response = strict.post(
+        f"{BASE}/profile/",
+        data={"name": "Updated Name", "date_birth": "1985-05-05", "phone": ""},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 403
+
+
 # ---------------------------------------------------------- django admin (is_staff)
 
 

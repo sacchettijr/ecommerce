@@ -225,4 +225,12 @@ export default {
             "La nuova password deve essere diversa dalla password attuale.",
         cancel: "Annulla",
     },
+    profileEdit: {
+        title: "Modifica profilo | E-Commerce",
+        heading: "Modifica profilo",
+        submit: "Aggiorna profilo",
+        submitting: "Salvataggio…",
+        success: "Il tuo profilo è stato aggiornato con successo.",
+        cancel: "Annulla",
+    },
 } satisfies Translations;

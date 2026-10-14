@@ -225,4 +225,12 @@ export default {
         unchangedWarning: "A nova senha deve ser diferente da senha atual.",
         cancel: "Cancelar",
     },
+    profileEdit: {
+        title: "Editar perfil | E-Commerce",
+        heading: "Editar perfil",
+        submit: "Atualizar perfil",
+        submitting: "Salvando…",
+        success: "Seu perfil foi atualizado com sucesso.",
+        cancel: "Cancelar",
+    },
 } satisfies Translations;

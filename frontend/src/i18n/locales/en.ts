@@ -226,4 +226,12 @@ export default {
             "The new password must be different from your current password.",
         cancel: "Cancel",
     },
+    profileEdit: {
+        title: "Edit profile | E-Commerce",
+        heading: "Edit profile",
+        submit: "Update profile",
+        submitting: "Saving…",
+        success: "Your profile has been updated successfully.",
+        cancel: "Cancel",
+    },
 } satisfies Translations;

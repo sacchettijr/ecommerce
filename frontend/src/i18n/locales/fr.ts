@@ -228,4 +228,12 @@ export default {
             "Le nouveau mot de passe doit être différent du mot de passe actuel.",
         cancel: "Annuler",
     },
+    profileEdit: {
+        title: "Modifier le profil | E-Commerce",
+        heading: "Modifier le profil",
+        submit: "Mettre à jour le profil",
+        submitting: "Enregistrement…",
+        success: "Votre profil a été mis à jour avec succès.",
+        cancel: "Annuler",
+    },
 } satisfies Translations;

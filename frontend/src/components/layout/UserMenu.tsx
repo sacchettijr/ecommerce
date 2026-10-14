@@ -66,6 +66,10 @@ export function UserMenu({ user, onCloseMobileMenu }: UserMenuProps) {
                         <button
                             type="button"
                             role="menuitem"
+                            onClick={() => {
+                                closeAll();
+                                void navigate("/profile/edit");
+                            }}
                             className={itemClassName}
                         >
                             {t.userMenu.editProfile}

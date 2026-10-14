@@ -212,4 +212,12 @@ export interface Translations {
         unchangedWarning: string;
         cancel: string;
     };
+    profileEdit: {
+        title: string;
+        heading: string;
+        submit: string;
+        submitting: string;
+        success: string;
+        cancel: string;
+    };
 }

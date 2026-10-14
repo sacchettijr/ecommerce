@@ -22,7 +22,7 @@ class UserUpdateForm(
     ModelFormBase,
 ):
     class Meta:
-        model: UserModel
+        model = UserModel
         fields = (
             "name",
             "date_birth",

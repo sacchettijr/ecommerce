@@ -25,7 +25,7 @@ const navItemClassName =
     "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium";
 const activeNavItemClassName = `${navItemClassName} bg-blue-50 text-blue-700`;
 const inactiveNavItemClassName = `${navItemClassName} text-gray-700 hover:bg-gray-50`;
-// Itens do menu que ainda não têm página própria (edição de perfil, pedidos, etc.) —
+// Itens do menu que ainda não têm página própria (pedidos, endereços, lista de desejos) —
 // mesmo tratamento "reservado" já usado pelo UserMenu da navbar.
 const reservedNavItemClassName = `${navItemClassName} cursor-default text-gray-400`;
 
@@ -64,10 +64,18 @@ export function AccountLayout({
                                 <UserIcon className="size-5 shrink-0" />
                                 {t.userMenu.profile}
                             </NavLink>
-                            <span className={reservedNavItemClassName}>
+                            <NavLink
+                                to="/profile/edit"
+                                end
+                                className={({ isActive }) =>
+                                    isActive
+                                        ? activeNavItemClassName
+                                        : inactiveNavItemClassName
+                                }
+                            >
                                 <PencilIcon className="size-5 shrink-0" />
                                 {t.userMenu.editProfile}
-                            </span>
+                            </NavLink>
                             <NavLink
                                 to="/profile/password"
                                 end

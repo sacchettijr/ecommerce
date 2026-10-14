@@ -18,10 +18,24 @@ describe("AccountLayout", () => {
         expect(
             screen.getByRole("navigation", { name: "Account navigation" }),
         ).toBeInTheDocument();
-        expect(
-            screen.getByRole("link", { name: /profile/i }),
-        ).toHaveAttribute("href", "/profile");
+        expect(screen.getByRole("link", { name: "Profile" })).toHaveAttribute(
+            "href",
+            "/profile",
+        );
         expect(screen.getByText("Profile content")).toBeInTheDocument();
+    });
+
+    it("links to the edit profile page", () => {
+        renderWithProviders(
+            <AccountLayout title="Account">
+                <p>Profile content</p>
+            </AccountLayout>,
+            { user: makeSessionUser() },
+        );
+
+        expect(
+            screen.getByRole("link", { name: /edit profile/i }),
+        ).toHaveAttribute("href", "/profile/edit");
     });
 
     it("links to the password change page", () => {
@@ -46,9 +60,8 @@ describe("AccountLayout", () => {
         );
 
         expect(
-            screen.queryByRole("link", { name: /edit profile/i }),
+            screen.queryByRole("link", { name: /my orders/i }),
         ).not.toBeInTheDocument();
-        expect(screen.getByText("Edit profile")).toBeInTheDocument();
         expect(screen.getByText("My orders")).toBeInTheDocument();
         expect(screen.getByText("My addresses")).toBeInTheDocument();
         expect(screen.getByText("Wishlist")).toBeInTheDocument();
