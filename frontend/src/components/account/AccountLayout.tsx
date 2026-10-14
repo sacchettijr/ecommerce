@@ -11,6 +11,7 @@ import {
     LockClosedIcon,
     MapPinIcon,
     PencilIcon,
+    ShieldCheckIcon,
     UserIcon,
 } from "../ui/icons.tsx";
 
@@ -113,6 +114,7 @@ export function AccountLayout({
                                     href="/admin/"
                                     className={inactiveNavItemClassName}
                                 >
+                                    <ShieldCheckIcon className="size-5 shrink-0" />
                                     {t.userMenu.admin}
                                 </a>
                             )}

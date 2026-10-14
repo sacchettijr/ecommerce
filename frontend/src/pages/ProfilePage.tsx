@@ -1,5 +1,6 @@
 import { AccountLayout } from "../components/account/AccountLayout.tsx";
 import { Alert } from "../components/ui/Alert.tsx";
+import { ShieldCheckIcon } from "../components/ui/icons.tsx";
 import { useAuth } from "../context/useAuth.ts";
 import { useMessages } from "../hooks/useMessages.ts";
 import { useLanguage } from "../i18n/useLanguage.ts";
@@ -52,9 +53,17 @@ export function ProfilePage() {
             messages={messages}
             onDismissMessage={dismissMessage}
         >
-            <h1 className="mb-6 text-2xl font-bold text-gray-900">
-                {t.profile.heading}
-            </h1>
+            <div className="mb-6 flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-bold text-gray-900">
+                    {t.profile.heading}
+                </h1>
+                {user.is_staff && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-800 ring-1 ring-blue-300">
+                        <ShieldCheckIcon className="size-4" />
+                        {t.profile.staffBadge}
+                    </span>
+                )}
+            </div>
 
             <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
                 <dl className="divide-y divide-gray-100">
@@ -83,12 +92,6 @@ export function ProfilePage() {
                     )}
                 </dl>
             </div>
-
-            {user.is_staff && (
-                <p className="mt-4 inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
-                    {t.profile.staffBadge}
-                </p>
-            )}
         </AccountLayout>
     );
 }
