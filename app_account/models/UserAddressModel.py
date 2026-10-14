@@ -79,6 +79,12 @@ class UserAddressModel(BaseAddressModel):
 
             siblings = type(self).objects.filter(user_id=user_id)
 
+            #   A user's first address is always their primary one, regardless of what the
+            #   caller submitted — keeps the "has addresses => exactly one primary" invariant
+            #   self-enforcing for any future creation path (admin today, an API later).
+            if self.pk is None and not siblings.exists():
+                self.primary = True
+
             if cast(bool, self.primary):
                 siblings.exclude(pk=self.pk).filter(primary=True).update(primary=False)
 

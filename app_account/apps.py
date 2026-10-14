@@ -14,6 +14,8 @@ class AccountConfig(
     def ready(
         self,
     ) -> None:
+        from importlib import import_module
+
         from django.db.models.signals import post_migrate
 
         from app_account.signals import create_default_superuser
@@ -22,4 +24,8 @@ class AccountConfig(
             receiver=create_default_superuser,
             sender=self,
         )
+        #   Connects via the @receiver decorator as a side effect of the import, same pattern
+        #   as app_product's ready().
+        import_module(name="app_account.signals.promote_primary_address_after_delete")
+
         return super().ready()

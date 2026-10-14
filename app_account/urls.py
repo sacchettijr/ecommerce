@@ -13,6 +13,7 @@ from app_account.api.viewsets import (
     ProfileUpdateViewSet,
     SessionViewSet,
     SignUpViewSet,
+    UserAddressViewSet,
 )
 
 router = DefaultRouter()
@@ -56,6 +57,11 @@ router.register(
     prefix="profile",
     viewset=ProfileUpdateViewSet,
     basename="profile_update",
+)
+router.register(
+    prefix="addresses",
+    viewset=UserAddressViewSet,
+    basename="user_address",
 )
 
 urlpatterns: list[URLPattern | URLResolver] = [

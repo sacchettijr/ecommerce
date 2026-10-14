@@ -6,6 +6,7 @@ from .PasswordResetViewSet import PasswordResetViewSet
 from .ProfileUpdateViewSet import ProfileUpdateViewSet
 from .SessionViewSet import SessionViewSet
 from .SignUpViewSet import SignUpViewSet
+from .UserAddressViewSet import UserAddressViewSet
 
 __all__ = [
     "EmailVerificationViewSet",
@@ -16,4 +17,5 @@ __all__ = [
     "ProfileUpdateViewSet",
     "SessionViewSet",
     "SignUpViewSet",
+    "UserAddressViewSet",
 ]

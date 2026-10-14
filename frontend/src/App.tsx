@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router";
 
 import { ProtectedRoute } from "./auth/ProtectedRoute.tsx";
 import { Layout } from "./components/layout/Layout.tsx";
+import { AddressListPage } from "./pages/AddressListPage.tsx";
 import { ContactPage } from "./pages/ContactPage.tsx";
 import { EmailVerificationConfirmPage } from "./pages/EmailVerificationConfirmPage.tsx";
 import { HomePage } from "./pages/HomePage.tsx";
@@ -52,6 +53,14 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <PasswordChangePage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="profile/addresses"
+                    element={
+                        <ProtectedRoute>
+                            <AddressListPage />
                         </ProtectedRoute>
                     }
                 />

@@ -236,4 +236,31 @@ export default {
         success: "Votre profil a été mis à jour avec succès.",
         cancel: "Annuler",
     },
+    addressList: {
+        title: "Mes adresses | E-Commerce",
+        heading: "Mes adresses",
+        addAddress: "Ajouter une adresse",
+        editAddress: "Modifier l'adresse",
+        deleteAddress: "Supprimer l'adresse",
+        primaryBadge: "Principale",
+        setPrimaryLabel: "Adresse principale",
+        setPrimaryAccessibleLabel: (summary: string) =>
+            `Définir ${summary} comme adresse principale`,
+        radioGroupLabel: "Sélection de l'adresse principale",
+        emptyState: "Aucune adresse enregistrée.",
+        loadError:
+            "Impossible de charger vos adresses. Veuillez réessayer.",
+        updateError:
+            "Impossible de mettre à jour votre adresse principale. Veuillez réessayer.",
+        primaryUpdated: "Adresse principale mise à jour avec succès.",
+        streetLabel: "Rue",
+        numberLabel: "Numéro",
+        complementLabel: "Complément",
+        referenceLabel: "Référence",
+        districtLabel: "Quartier",
+        postalCodeLabel: "Code postal",
+        cityLabel: "Ville",
+        stateLabel: "État/Province",
+        countryLabel: "Pays",
+    },
 } satisfies Translations;

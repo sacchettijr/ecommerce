@@ -220,4 +220,28 @@ export interface Translations {
         success: string;
         cancel: string;
     };
+    addressList: {
+        title: string;
+        heading: string;
+        addAddress: string;
+        editAddress: string;
+        deleteAddress: string;
+        primaryBadge: string;
+        setPrimaryLabel: string;
+        setPrimaryAccessibleLabel: (summary: string) => string;
+        radioGroupLabel: string;
+        emptyState: string;
+        loadError: string;
+        updateError: string;
+        primaryUpdated: string;
+        streetLabel: string;
+        numberLabel: string;
+        complementLabel: string;
+        referenceLabel: string;
+        districtLabel: string;
+        postalCodeLabel: string;
+        cityLabel: string;
+        stateLabel: string;
+        countryLabel: string;
+    };
 }

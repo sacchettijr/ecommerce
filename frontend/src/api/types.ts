@@ -43,6 +43,34 @@ export interface ContactPayload {
     message: string;
 }
 
+export interface AddressLocation {
+    id: number;
+    name: string;
+}
+
+export interface AddressState extends AddressLocation {
+    code: string;
+}
+
+export interface AddressCountry extends AddressLocation {
+    iso_code: string;
+}
+
+export interface UserAddress {
+    id: number;
+    street: string;
+    number: string;
+    // Sempre string, nunca null — campos opcionais no backend (blank=True) serializam como "".
+    complement: string;
+    reference: string;
+    district: string;
+    postal_code: string;
+    city: AddressLocation;
+    state: AddressState;
+    country: AddressCountry;
+    primary: boolean;
+}
+
 export interface SessionUser {
     id: number;
     name: string;
