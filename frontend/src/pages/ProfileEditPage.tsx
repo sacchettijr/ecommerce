@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 
@@ -8,6 +8,7 @@ import { Alert } from "../components/ui/Alert.tsx";
 import { SubmitButton } from "../components/ui/SubmitButton.tsx";
 import { TextField } from "../components/ui/TextField.tsx";
 import { textLinkClassName } from "../components/ui/linkClassNames.ts";
+import { sanitizePhoneInput } from "../components/ui/sanitizePhoneInput.ts";
 import { useAuth } from "../context/useAuth.ts";
 import { useApiForm } from "../hooks/useApiForm.ts";
 import { useMessages } from "../hooks/useMessages.ts";
@@ -77,6 +78,13 @@ export function ProfileEditPage() {
         }
     };
 
+    const onPhoneChange = (event: ChangeEvent<HTMLInputElement>) => {
+        form.setValues((current) => ({
+            ...current,
+            phone: sanitizePhoneInput(event.target.value),
+        }));
+    };
+
     return (
         <AccountLayout
             title={t.profileEdit.title}
@@ -115,7 +123,7 @@ export function ProfileEditPage() {
                         autoComplete="tel"
                         placeholder={t.auth.phonePlaceholder}
                         value={form.values.phone}
-                        onChange={form.onChange}
+                        onChange={onPhoneChange}
                         error={form.fieldErrors.phone}
                     />
 

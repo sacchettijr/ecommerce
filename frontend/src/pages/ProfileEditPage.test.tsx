@@ -57,6 +57,19 @@ describe("ProfileEditPage", () => {
         );
     });
 
+    it("ignores letters typed into the phone field, keeping digits and symbols", async () => {
+        const testUser = userEvent.setup();
+
+        renderWithProviders(<ProfileEditPage />, {
+            user: makeSessionUser({ phone: "" }),
+        });
+
+        const phoneField = screen.getByLabelText(byLabel("Phone"));
+        await testUser.type(phoneField, "(11a) 9b8765-c4321");
+
+        expect(phoneField).toHaveValue("(11) 98765-4321");
+    });
+
     it("does not render any control for staff/permission fields", () => {
         renderWithProviders(<ProfileEditPage />, {
             user: makeSessionUser({ is_staff: true }),

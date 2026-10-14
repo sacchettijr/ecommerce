@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { FormEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router";
 
 import { signup } from "../api/auth.ts";
@@ -13,6 +13,7 @@ import {
     buttonLinkClassName,
     textLinkClassName,
 } from "../components/ui/linkClassNames.ts";
+import { sanitizePhoneInput } from "../components/ui/sanitizePhoneInput.ts";
 import { useApiForm } from "../hooks/useApiForm.ts";
 import { useLanguage } from "../i18n/useLanguage.ts";
 
@@ -59,6 +60,13 @@ export function SignupPage() {
         if (created) {
             setRegisteredEmail(form.values.email);
         }
+    };
+
+    const onPhoneChange = (event: ChangeEvent<HTMLInputElement>) => {
+        form.setValues((current) => ({
+            ...current,
+            phone: sanitizePhoneInput(event.target.value),
+        }));
     };
 
     return (
@@ -112,7 +120,7 @@ export function SignupPage() {
                     autoComplete="tel"
                     placeholder={t.auth.phonePlaceholder}
                     value={form.values.phone}
-                    onChange={form.onChange}
+                    onChange={onPhoneChange}
                     error={form.fieldErrors.phone}
                 />
                 <TextField
