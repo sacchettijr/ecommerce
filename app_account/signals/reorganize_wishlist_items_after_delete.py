@@ -8,6 +8,8 @@ from django.dispatch import receiver
 from app_account.models import (
     UserWishlistItemModel,
     UserWishlistModel,
+)
+from app_account.models.organize_wishlist_items import (
     organize_wishlist_items,
 )
 

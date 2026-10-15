@@ -1,4 +1,3 @@
-from .organize_wishlist_items import organize_wishlist_items
 from .UserAddressModel import UserAddressModel
 from .UserManagerModel import UserManagerModel
 from .UserModel import UserModel
@@ -11,5 +10,4 @@ __all__ = [
     "UserModel",
     "UserWishlistItemModel",
     "UserWishlistModel",
-    "organize_wishlist_items",
 ]

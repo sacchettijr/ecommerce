@@ -3,12 +3,10 @@ from typing import (
     cast,
 )
 
-from app_account.models.UserWishlistItemModel import UserWishlistItemModel
-
 if TYPE_CHECKING:
     from django.db.models import QuerySet
 
-    from app_account.models import UserWishlistItemModel
+    from .UserWishlistItemModel import UserWishlistItemModel
 
 
 def _position(item: UserWishlistItemModel) -> int:
@@ -31,7 +29,7 @@ def organize_wishlist_items(
         position = next(
             (
                 index
-                for index, item in enumerate[UserWishlistItemModel](ordered)
+                for index, item in enumerate(ordered)
                 if _position(item)
                 >= _position(
                     item=anchor,
@@ -39,10 +37,7 @@ def organize_wishlist_items(
             ),
             len(ordered),
         )
-        ordered.insert(
-            position,
-            anchor,
-        )
+        ordered.insert(position, anchor)
 
     changed: list[UserWishlistItemModel] = []
 
@@ -53,7 +48,7 @@ def organize_wishlist_items(
 
     if changed:
         items.bulk_update(
-            objs=changed,
+            changed,
             fields=[
                 "position",
             ],

@@ -3,6 +3,7 @@ from __future__ import (
 )
 
 from typing import (
+    TYPE_CHECKING,
     Any,
 )
 
@@ -13,9 +14,10 @@ from django.utils.translation import (
     gettext_lazy as _,
 )
 
-from app_account.models.UserModel import (
-    UserModel,
-)
+if TYPE_CHECKING:
+    from app_account.models.UserModel import (
+        UserModel,
+    )
 
 
 class UserManagerModel(
