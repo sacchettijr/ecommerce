@@ -27,5 +27,7 @@ class AccountConfig(
         #   Connects via the @receiver decorator as a side effect of the import, same pattern
         #   as app_product's ready().
         import_module(name="app_account.signals.promote_primary_address_after_delete")
+        import_module(name="app_account.signals.create_wishlist_for_new_user")
+        import_module(name="app_account.signals.reorganize_wishlist_items_after_delete")
 
         return super().ready()
