@@ -9,12 +9,23 @@ young, actively-evolving prototype, not a mature codebase).
   full flow, specific error codes, rate-limited, anti-enumeration where
   it matters. See `domain.md`.
 - Public product catalog: list (search/filter/sort/pagination), detail,
-  categories — real API, real frontend pages wired to it.
-- Product image management: ordering + single-primary-image invariants,
+  categories — real API, real frontend pages wired to it. Default listing
+  order is a daily-seeded deterministic shuffle (2026-10-16), not
+  recency — see `domain.md`. Detail page breadcrumb truncates a long
+  product name (full name preserved elsewhere) and the description is
+  collapsible past a length threshold; prices display with USD
+  formatting (`$1,234.56`) everywhere — presentation only, no currency
+  conversion, no stored-value change.
+- Product image management: ordering + single-primary-image invariants
+  (now including auto-primary-on-first-image, added 2026-10-16),
   enforced at both the model and DB-constraint level, with admin inline
-  support. The project's best-executed feature architecturally.
+  support and dynamic JS for the primary checkbox/order auto-fill. The
+  project's best-executed feature architecturally.
 - Address reference data (Country/State/City) — admin-manageable,
-  hierarchical, `PROTECT`-on-delete.
+  hierarchical, `PROTECT`-on-delete. The admin's address form now has a
+  real country→state→city cascading filter (2026-10-16, backed by two
+  new staff-only `app_address` endpoints) plus server-side cross-field
+  validation — see `domain.md`.
 - `UserAddressModel`: admin-manageable (standalone `UserAddressAdmin`
   plus an inline under `UserAdmin`), with the full primary-address
   invariant (at most one; a user's first address is always primary;
@@ -72,7 +83,10 @@ young, actively-evolving prototype, not a mature codebase).
   per-object permission usage anywhere.
 - Backend i18n: infrastructure (catalogs for all 5 languages) exists, but
   only 3 strings are actually marked for translation, and `LANGUAGES`
-  itself only activates 3 of the 5 locales.
+  itself only activates 3 of the 5 locales. `LANGUAGE_CODE` (backend) and
+  the frontend's `DEFAULT_LANGUAGE` fallback are both `"en"` now
+  (2026-10-16, were `"pt-br"`/inconsistently `"en-us"` in `.env`) — all 5
+  languages and the switcher are otherwise unchanged.
 - Frontend type-checking/linting: hygiene flags are on, but neither full
   TypeScript `strict` mode nor type-checked ESLint rules are enabled,
   despite the frontend's own (otherwise unedited, stale) `README.md`

@@ -25,7 +25,13 @@
   Use the same pattern for `forms.ModelForm[Model]` and
   `admin.TabularInline[Child, Parent]`. This exists because
   `django-stubs`' generics aren't subscriptable at runtime — don't "fix"
-  it by removing the `TYPE_CHECKING` branch.
+  it by removing the `TYPE_CHECKING` branch. **Widgets are the one
+  exception** — `app_address/forms/widgets/{CityLocationSelect,
+  StateLocationSelect}.py` both subclass `forms.Select` directly, no
+  `TYPE_CHECKING` indirection at all, since `forms.Select` isn't a
+  generic django-stubs needs this workaround for. Don't add the
+  generic-base boilerplate to a widget just for consistency with
+  admin/forms — it has no purpose there.
 - Keep using `cast(Any, instance).field_id` (not `.field.pk`) when you need
   an FK's raw id without triggering a query or when django-stubs can't
   infer the type — this is the established pattern in `ProductImageModel.save()`
@@ -35,13 +41,27 @@
 
 - Model-level invariants: prefer a DB `Meta.constraint` as the ultimate
   guard, with a `save()` override doing the "friendly" auto-correction
-  (see `ProductImageModel`). When a model's `save()` normalizes/reorganizes
-  fields that a `Meta.constraint` also covers, override
-  `validate_constraints`/`_get_unique_checks` to exclude those fields from
-  form-level validation — the DB constraint is still the real guard; the
-  form shouldn't double-guess it and produce a confusing validation error
-  during admin inline-formset submission. See `ProductImageModel` for the
-  exact pattern.
+  (see `ProductImageModel` — the original, most-cited example).
+  `UserAddressModel` (exactly one primary address per user) and
+  `UserWishlistItemModel` (unique product per wishlist, gap-free
+  `position`) follow the identical shape and are equally good references
+  if `ProductImageModel`'s specific domain (image ordering) doesn't map
+  cleanly onto what you're building. When a model's `save()`
+  normalizes/reorganizes fields that a `Meta.constraint` also covers,
+  override `validate_constraints`/`_get_unique_checks` to exclude those
+  fields from form-level validation — the DB constraint is still the
+  real guard; the form shouldn't double-guess it and produce a confusing
+  validation error during admin inline-formset submission. **A separate,
+  related pitfall all three of these models' `post_delete` signals had
+  to account for**: Django's admin `ModelForm` binds submitted field
+  data onto `form.instance` *before* calling `.delete()` on a row marked
+  for deletion, so a signal that trusts `instance.<flag>` (e.g.
+  `instance.is_primary`) to decide whether to re-run the auto-correction
+  can see a stale/wrong value if that row's own form didn't resubmit the
+  checked box. Check the real invariant against the database instead
+  (e.g. "rows remain but none has the flag set"), not the deleted
+  instance's own attribute — see `app_product/signals/product_image.py`
+  and `app_account/signals/promote_primary_address_after_delete.py`.
 - Account-related errors use stable `code` values in the response body
   (`"inactive"`, `"email_not_verified"`, `"invalid_link"`) so the frontend
   can branch without parsing message text. Follow this when adding new
@@ -88,10 +108,29 @@
   local helper functions and `@pytest.mark.parametrize`. See `testing.md`
   for the full picture (including real, current coverage gaps).
 - Keep new tests in the matching app's `tests/{api,models,views}/` and
-  `tests/factories/` subfolders, matching the existing per-app layout —
-  don't put a new test file directly under `tests/` the way
-  `app_account/tests/test_frontend_url.py` currently does (an existing
-  inconsistency to avoid repeating, not a pattern to copy).
+  `tests/factories/` subfolders, matching the existing per-app layout,
+  **when the test genuinely fits one of those three buckets.** A test
+  for something that's none of the three — migration-graph consistency,
+  Django Admin field order/config — belongs directly under `tests/`
+  instead, e.g. `app_account/tests/test_frontend_url.py`,
+  `test_migrations.py`, `test_user_address_admin.py`, and
+  `app_product/tests/test_product_admin.py`. This is now an established,
+  deliberate pattern (four instances across the project, added for
+  exactly this reason each time) — not an inconsistency to avoid. Don't
+  force an admin-config or migration test into `models/` or `views/`
+  just to satisfy the triad; don't invent a fourth subfolder for it
+  either unless there are enough of a kind to justify one.
+
+## Django Admin JavaScript
+
+Plain vanilla JS, no jQuery, wrapped in `document.addEventListener("DOMContentLoaded", ...)`,
+using Django's native `formset:added`/`formset:removed` `CustomEvent`s for
+dynamic inline-formset behavior — see `architecture.md`'s "Design
+decisions worth preserving" for the full pattern and the real files
+(`static/src/js/admin/*.js`) that establish it. Test this kind of file
+with the `jsdom`-based harness in `frontend/src/admin-js/` (see
+`testing.md`) rather than documenting only manual steps when automation
+is actually feasible.
 
 ## Docker / infra
 

@@ -13,13 +13,29 @@ ecommerce/
 ├── PROJECT/                 Django project package (settings, urls, celery app)
 │   └── settings/            modularized settings — see below
 ├── app_account/             users, auth, email verification, user addresses
-├── app_address/             Country/State/City reference data (admin-only)
+├── app_address/             Country/State/City reference data — mostly
+│                             admin-managed, but now has a small staff-only
+│                             API too (api/viewsets/, api/serializers/,
+│                             urls.py) backing the admin's own cascading
+│                             dropdowns — not "admin-only" in the sense of
+│                             having no API at all. See `api.md`/`domain.md`.
 ├── app_core/                shared BaseModel, contact form/API, health check
 ├── app_product/             catalog: categories, products, product images
 ├── utils/                   cross-app helper functions (no Django app of its own)
-├── static/, staticfiles/    source static assets / collectstatic output
+├── static/, staticfiles/    source static assets / collectstatic output —
+│                             static/src/js/admin/ and static/src/css/admin/
+│                             hold the Django Admin's own vanilla-JS/CSS
+│                             (city_location_select.js, product_image_inline.js,
+│                             user_address_inline.js, product_slug_preview.js,
+│                             markdown_editor.js/.css, user_address_inline.css);
+│                             static/src/js/slugify.js is a plain (non-admin)
+│                             sibling, not under admin/
 ├── templates/                Django templates (email only — see note below)
 ├── locale/                  gettext catalogs: en, es, fr, it, pt_BR
+├── data/                    Django fixture JSON for `loaddata`/`dumpdata`
+│                             (country/state/city reference data, product/
+│                             category/image seed data) — paired with
+│                             dev_dump_data.cmd/dev_load_data.cmd below
 ├── frontend/                 React + TypeScript + Vite app (independent project)
 ├── frontend.old/             legacy Django-template frontend — DO NOT TOUCH
 ├── database/, redis/, rabbitmq/, cloudbeaver/   per-service config (no Dockerfile;
@@ -34,6 +50,14 @@ ecommerce/
 ├── requirements.txt / requirements-dev.txt   Python dependencies
 ├── pyproject.toml              ruff / mypy / pyright / pytest / djlint config
 ├── manage.py
+├── dev_build.cmd                Windows helper: docker compose build/up
+├── dev_load_data.cmd             Windows helper: loaddata the data/*.json fixtures
+├── dev_dump_data.cmd              Windows helper: dumpdata into data/*.json (the inverse)
+├── dev_reset.cmd                 Windows helper: local dev reset (see the script
+│                                 itself before relying on it — not independently
+│                                 audited here)
+├── README.md / CLAUDE.md          repo-root docs — CLAUDE.md `@`-includes
+│                                 `.claude/CLAUDE.md`, the real instructions file
 ├── .env / .env-example          environment variables (`.env` is gitignored)
 └── media/, mediafiles/          uploaded media (dev) / collected media volume
 ```
@@ -119,6 +143,7 @@ stack details. Key subdirectories under `frontend/src/`:
 
 | Directory | Responsibility |
 |---|---|
+| `admin-js/` | **Not** React/browser code — Node-side jsdom tests (`loadAdminScript.ts` harness + `*.test.ts`) that execute the real `static/src/js/admin/*.js` files Django serves, to cover the Admin's own vanilla JS. Has its own `tsconfig.admin-js.json` (Node types) excluded from `tsconfig.app.json`; needs `docker-compose.yml`'s `frontend` service's `./static:/repo-static:ro` mount to read those files. See `testing.md`. |
 | `api/` | All backend I/O (`client.ts` fetch wrapper + `ApiError`, `auth.ts`, `products.ts`, `contact.ts`) |
 | `auth/` | Small routing helpers for the auth flow (`?next=` redirect preservation) |
 | `components/auth/`, `components/layout/`, `components/product/`, `components/ui/` | UI, grouped by concern |

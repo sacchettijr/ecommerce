@@ -17,14 +17,16 @@ live schema/docs (not just installed — confirmed: `SpectacularAPIView`/
 | `/api/account/profile/` | self-service profile update (`name`/`date_birth`/`phone` only — `email` is not editable) for the authenticated session's own user (`IsAuthenticated`, no user id accepted — see `domain.md`); returns `{"user": {...}}`, same shape as login/signup |
 | `/api/account/addresses/` | list the authenticated session's own addresses (`IsAuthenticated`, no user/address id from the client can surface another user's data — see `domain.md`); plain JSON array, not paginated; primary first |
 | `/api/account/addresses/{id}/set-primary/` | POST, makes that address primary and unsets the user's other addresses atomically; 404 (not 403) if `{id}` doesn't belong to the requester, so it can't be used to probe whether an id exists; returns the user's full, fresh address list |
-| `/api/product/products/`, `/api/product/products/{slug}/` | public product list/detail (`active=True` only) |
+| `/api/product/products/`, `/api/product/products/{slug}/` | public product list/detail (`active=True` only); default order is a daily-seeded deterministic shuffle, not recency — see `domain.md`'s "Catalog ordering and randomization" |
 | `/api/product/categories/` | public category list (`active=True` only) |
 | `/api/core/contact/` | contact form submission (throttled, dispatches an email via Celery) |
 | `/api/core/health/` | health check (used by the Docker/Render healthcheck) |
+| `/api/address/states/?country=<id>` | states for a country (`IsAdminUser`, no pagination — plain array) — backs the Django Admin's country→state cascade only, added 2026-10-16 |
+| `/api/address/cities/?state=<id>` | cities for a state (`IsAdminUser`, no pagination) — backs the admin's state→city cascade only, added 2026-10-16 |
 
-`app_address` still has **no routes of its own** — no `app_address/urls.py`
-exists and it is not included in `PROJECT/urls.py`; Country/State/City
-remain admin-managed only, reachable from the API only as small
+`app_address` now has its own routes (`app_address/urls.py`, added
+2026-10-16) — the two read-only, staff-only endpoints above. Country/State/City
+are still otherwise admin-managed only; they also remain reachable as small
 read-only nested objects inside `/api/account/addresses/`'s response
 (see `domain.md`).
 
@@ -46,9 +48,13 @@ read-only nested objects inside `/api/account/addresses/`'s response
 - **Permissions**: global default is `IsAuthenticated`
   (`PROJECT/settings/rest_framework.py`); public endpoints (product/category
   list/detail, contact, session, signup, login) explicitly set
-  `permission_classes = [AllowAny]` at the viewset level. There is no
-  object-level permission system in active use despite `django-guardian`
-  being installed and backend-registered — see `../memory/known_issues.md`.
+  `permission_classes = [AllowAny]` at the viewset level. `IsAdminUser`
+  (DRF's built-in staff-only permission) is now used too, for the two new
+  `app_address` geo endpoints that exist solely to back a Django Admin
+  widget — the first precedent for a staff-gated DRF endpoint in this
+  project. There is no object-level permission system in active use
+  despite `django-guardian` being installed and backend-registered — see
+  `../memory/known_issues.md`.
 - **Throttling**: per-scope `ScopedRateThrottle`, rates centralized in
   `PROJECT/settings/rest_framework.py` (`DEFAULT_THROTTLE_RATES`), applied
   per-viewset via `throttle_scope`. See `domain.md` for the actual rates.

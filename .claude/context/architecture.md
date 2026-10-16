@@ -199,3 +199,16 @@ Render today, by explicit documented tradeoff, not by accident.
   *other* services (Postgres, Redis, RabbitMQ, CloudBeaver) are currently
   still host-published — see `security.md` for why that's worth revisiting
   before this is ever run on a non-isolated host.
+- **Deterministic pseudo-random ordering via a date-seeded SQL hash, not
+  `order_by("?")` or a stored random column.** `ProductSimpleListViewSet`
+  (2026-10-16) is the reference example — see `domain.md`'s "Catalog
+  ordering and randomization." Reuse this `MD5(Concat(Cast(...), Value(seed)))`
+  pattern for any future "varied but pagination-stable" ordering need
+  instead of reaching for per-request randomness or a new persisted field.
+- **Django Admin JS in this project is plain vanilla JS (no jQuery), using
+  Django's native `CustomEvent`s** (`formset:added`/`formset:removed`,
+  confirmed dispatched as real DOM events, not jQuery events, in this
+  project's installed Django 6.1.1) **for dynamic inline-formset behavior** —
+  see `static/src/js/admin/product_image_inline.js` (2026-10-16) and the
+  pre-existing `city_location_select.js`/`product_slug_preview.js`. Don't
+  introduce jQuery or `django.jQuery` for new admin JS; match this style.

@@ -83,7 +83,8 @@ before assuming an API from an older version).
   `select = ["E","F","I","B","UP","RUF"]` (not `"ALL"`; no `D`/`S`/`N`
   rule groups). Per-file-ignores for `admin.py` (`RUF012`, `F401`),
   `models.py` (`F401`), `migrations/*.py` (`RUF012`, `E501`, with an
-  explanatory comment about Django-generated code).
+  explanatory comment about Django-generated code), `**/tests.py`
+  (`F401`), and `PROJECT/settings/__init__.py` (`F403`, `F405`).
 - **mypy**: `mypy_django_plugin.main` plugin, `django_settings_module =
   "PROJECT.settings"`; `disallow_untyped_defs`/`check_untyped_defs`/
   `no_implicit_optional` on (strict-ish, not full `strict = true`);
@@ -103,6 +104,18 @@ before assuming an API from an older version).
   `erasableSyntaxOnly`, `noFallthroughCasesInSwitch`). See
   `../memory/known_issues.md` — the frontend's own stale `README.md` suggests
   adopting the stricter configs, but this was never done.
+  **`tsconfig.json` is a references-only root** (no `compilerOptions` of
+  its own) pointing at three separate project configs, each with a
+  different `types` array for a different kind of file: `tsconfig.app.json`
+  (`types: ["vite/client"]`, browser app code, `include: ["src"]`,
+  `exclude: ["src/admin-js"]`), `tsconfig.node.json` (`types: ["node"]`,
+  just `vite.config.ts`), and `tsconfig.admin-js.json` (added 2026-10-16,
+  `types: ["node"]`, `module`/`moduleResolution: "nodenext"`,
+  `include: ["src/admin-js"]`) — the last one exists because
+  `src/admin-js/`'s jsdom-based tests use Node built-ins
+  (`fs`/`path`/`import.meta.dirname`) that don't belong in the
+  browser-only `app` config. `@types/jsdom` is a devDependency purely for
+  this (`jsdom` itself ships no types).
 
 ## CI / automation
 

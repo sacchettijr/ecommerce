@@ -814,3 +814,263 @@ suite).
 one-off `docker compose run --rm --no-deps --entrypoint "..." backend`
 pattern (bypassing the crash-looping main container) made every
 diagnostic and fix command reproducible without racing the restart loop.
+
+## 2026-10-16 — Mid-session hotfix: two circular imports reintroduced the migration-incident crash loop
+
+Between the wishlist task above and the next one, the user reported
+breaking something while "testing a configuration." Diagnosed and fixed
+two real circular imports, both the same shape: a `from __future__ import
+annotations`-eligible, `TYPE_CHECKING`-only import had been changed to an
+unconditional runtime import, which is circular because the other side
+of each pair imports back for a real (non-type-only) reason:
+- `app_account/models/UserManagerModel.py` — `UserModel` import moved out
+  of `TYPE_CHECKING`; `UserModel.py` itself imports `UserManagerModel`
+  for real (`objects: ClassVar[UserManagerModel] = UserManagerModel()`).
+- `app_account/models/organize_wishlist_items.py` — same shape with
+  `UserWishlistItemModel`, compounded by `app_account/models/__init__.py`
+  now exporting `organize_wishlist_items` (it was never meant to be
+  public — mirrors `organize_product_images` not being exported from
+  `app_product/models/__init__.py` either).
+
+Both put `ecommerce_django` back into the exact same `entrypoint.sh`
+crash-loop mechanism as the earlier migration incident (`ImportError`
+during Django's own app-loading `import_models()`, fatal under `set -e`,
+retried forever by `restart: unless-stopped`). Fixed by restoring the
+`TYPE_CHECKING` guards and removing the stray export; verified
+`manage.py check` passes and the container reaches `Health=healthy`
+with `RestartCount` no longer climbing.
+
+## 2026-10-16 — Product pages, catalog randomization, i18n default, admin, images, addresses
+
+Eight-part task across the React storefront and Django backend/admin,
+executed in the order given, each stage verified before moving on
+(`manage.py check`/full `pytest`/`ruff`/`mypy`/`basedpyright` on the
+backend; `tsc -b`/`eslint`/full Vitest/`npm run build` on the frontend —
+all genuinely run, not assumed; final counts: 202 backend tests, 82
+frontend tests, both suites fully green, no migrations needed anywhere
+in this task).
+
+**1-2. Breadcrumb truncation + expandable description**
+(`frontend/src/pages/ProductDetailPage.tsx`): the breadcrumb was inline
+JSX with no reusable component anywhere in the codebase — extracted into
+new `components/product/ProductBreadcrumb.tsx`, truncating only the
+product-name segment via Tailwind `truncate`+`max-w` plus a `title`
+attribute (full name stays in the DOM, `<h1>`, and `<title>` tag
+untouched). New `components/product/ExpandableDescription.tsx` wraps the
+existing `<Markdown>` component unchanged (no sanitization behavior
+touched) with a 320-character threshold on the raw description deciding
+whether to show a `Read more`/`Show less` toggle (`aria-expanded`/
+`aria-controls`), CSS `max-height` clamping for the collapsed state so
+markdown structure is never string-truncated mid-token.
+
+**3. Randomized catalog ordering** (`app_product/api/viewsets/
+ProductSimpleListViewSet.py`): root cause confirmed first — the view's
+`ordering = ("-created_at",)` default, sent explicitly by the frontend's
+sort dropdown on `/products` and implicitly inherited by `/` (same
+endpoint, no `ordering` param). Chosen fix: a deterministic,
+**daily-seeded** pseudo-random order, `MD5(Concat(Cast("id", CharField()),
+Value(seed)))` with `seed = timezone.now().date().isoformat()`, annotated
+in `get_queryset()` and set as `ordering = ("_shuffle",)` — not in
+`ordering_fields`, so an explicit `?ordering=` still overrides it exactly
+as before (`StableOrderingFilter`'s `pk` tie-breaker still applies). No
+model field, no migration, no new dependency. Rejected alternatives:
+per-request `order_by("?")` (breaks pagination — reshuffles every
+request) and a per-session seed (adds real state for a catalog this
+small). Frontend: `productSort.ts` gained a `"featured"` sentinel
+(now `DEFAULT_PRODUCT_SORT`) meaning "send no `ordering` param," visible
+in the sort dropdown per the user's own clarification, with
+`ProductListPage.tsx` omitting the param for it. New tests prove
+stability-across-requests and no-duplicates-across-pages without
+asserting any specific sequence, per the task's own warning against
+fragile randomness-based tests.
+
+**4. English default language**: `PROJECT/settings/
+internationalization.py`'s `LANGUAGE_CODE` default `"pt-br"` → `"en"`;
+`.env`'s already-inconsistent `LANGUAGE_CODE=en-us` normalized to `en` to
+match the `LANGUAGES` tuple's `"en"` entry. Frontend:
+`frontend/src/i18n/languages.ts`'s `DEFAULT_LANGUAGE` → `"en"`. Both are
+just the final fallback — `LANGUAGES`, the switcher, and all 5 locale
+catalogs are untouched. Extracted `detectInitialLanguage` out of
+`LanguageProvider.tsx` into its own file (new
+`i18n/detectInitialLanguage.ts`) purely so it could be unit-tested
+without violating the project's `react-refresh/only-export-components`
+ESLint rule (a component file must export only the component).
+
+**5. USD price display, presentation only**:
+`components/product/formatPrice.ts`'s `Intl.NumberFormat("pt-BR", {currency:
+"BRL"})` → `Intl.NumberFormat("en-US", {currency: "USD"})` — the single
+function already shared by `ProductPrice.tsx` (detail) and
+`ProductCard.tsx` (grid/listing), so one change covered every
+customer-facing price. No conversion, no backend/numeric change,
+confirmed by tests asserting the formatter's output for known inputs,
+not any exchange behavior.
+
+**6. Product admin field reorder**
+(`app_product/admin/ProductAdmin.py`, `forms/ProductForm.py`): per the
+user's clarification, final order is `active, category, name, slug,
+price, thumbnail, description` (the task's own list omitted `active`;
+user chose to keep it first rather than move it to the end). Added an
+explicit `ProductAdmin.fields` tuple so `slug` (`readonly_fields`) is
+interleaved at the right spot instead of Django's default of appending
+every readonly field after all editable ones. Verified the *rendered*
+order via `ModelAdmin.get_form()`/`get_fieldsets()` directly (not just
+source order), per the task's explicit instruction to do so. List page
+config untouched — confirmed via a dedicated test, not just by not
+touching those lines.
+
+**7. ProductImage primary/ordering + dynamic admin JS**: most of the
+server-side invariants already existed (DB constraints, `save()`
+locking/demotion/reorg, a `post_delete` promotion signal) — the one real
+gap was that a product's first image didn't auto-become primary (added,
+mirrors `UserAddressModel`'s equivalent rule). Writing the "add + delete
+in the same submission" test required by the task surfaced a real,
+separate bug: Django's admin formset binds submitted field data
+(including an *unchecked* `is_primary` checkbox) onto `form.instance`
+*before* calling `.delete()` on a row marked for deletion, so the
+`post_delete` signal's `instance.is_primary` can be stale/wrong —
+fixed by checking the actual invariant ("images remain but none is
+primary") instead of trusting that attribute. New admin JS,
+`static/src/js/admin/product_image_inline.js` (loaded via
+`ProductImageInlineAdmin.Media.js`, which had none before): mutual
+exclusivity for the `is_primary` checkboxes and `max(order)+1` auto-fill
+for a new row (via Django's native `formset:added` `CustomEvent`,
+confirmed as a real DOM event in this Django version, not jQuery),
+narrowly scoped to the inline's own `#images-group` container, never
+reordering DOM rows or auto-submitting.
+
+**8. Country/state/city cascade, admin-only**: confirmed scope first —
+there is no customer-facing address create/edit form at all (list +
+set-primary only), so this only touches `UserAddressBaseForm`/the admin.
+New `app_address/api/viewsets/{StateListViewSet,CityListViewSet}.py`
+(`IsAdminUser`, unpaginated — `app_address` had zero API routes before
+this) plus `app_address/urls.py`, registered in `PROJECT/urls.py`.
+Extended the existing `city_location_select.js` (which already
+auto-filled state/country from a chosen city — kept as-is) with two more
+`change` listeners fetching the new endpoints and rebuilding the
+`<option>` lists for country→state and state→city, clearing
+incompatible selections. New `UserAddressBaseForm.clean()` rejects a
+`state`/`country` or `city`/`state` mismatch server-side regardless of
+what the JS did. `app_address` has its first tests of its own
+(`tests/api/test_geo_filters.py`).
+
+**Not verified live**: the two pieces of dynamic admin JS (section 7 and
+8) were not click-tested in a real browser — no Chrome DevTools MCP
+connection was available this session (confirmed failed/unavailable, not
+skipped). JS syntax was checked (`node --check`) and the server-side
+behavior each depends on is fully covered by automated tests; the admin
+field order (section 6) *was* verified against Django's real rendering
+machinery (`get_form`/`get_fieldsets`), which is the authoritative
+mechanism the template renders from, so that one doesn't carry the same
+caveat.
+
+## 2026-10-16 — Fix address dependencies, add primary-address selection, responsive layout, image ordering fix
+
+Follow-up to the same day's earlier task, fixing real bugs it introduced
+and adding one genuinely new piece. Root causes confirmed by reading the
+actual files and, for the two JS bugs, the *installed Django's own*
+template/JS source — not guessed.
+
+**1. Country → State → City synchronization, two real bugs fixed.**
+Bug 1: `UserAddressBaseForm.state` used a plain `forms.Select` (unlike
+`city`'s `CityLocationSelect`), so a freshly-rendered state `<option>`
+never had `data-country` to read — picking a state before any AJAX
+rebuild had happened did nothing. Fixed with a new
+`app_address/forms/widgets/StateLocationSelect.py` (mirrors
+`CityLocationSelect`), applied to the `state` field. Bug 2: rebuilding
+the city list after a state change replaced its options with ones
+lacking `data-state`/`data-country` entirely, since
+`CitySimpleSerializer` didn't return `state`/`country` — this is
+precisely why state-first interfered with the previously-working
+city-first sync, confirmed by reading `city_location_select.js`'s own
+`rebuildOptions()`. Fixed by adding `state` (plus `country` via
+`source="state.country_id"`) to `CitySimpleSerializer`, and
+generalizing `rebuildOptions()` to stamp both attributes on every
+rebuilt option. Rewrote `city_location_select.js`'s cascade logic:
+picking a state now also refreshes the state list itself (scoped to
+the derived country, keeping the selection) and the city list; picking
+a country refreshes the state list then the city list for whatever
+state survives; a per-field request-token discards a stale response
+that resolves after a newer one for the same field.
+
+**2. Primary-address selection — new, not a fix.** The previous task
+only built the cascade; nothing existed yet for primary selection. New
+`static/src/js/admin/user_address_inline.js` (loaded via
+`UserAddressInlineAdmin.Media.js`), mirroring
+`product_image_inline.js`'s `is_primary` exclusivity listener, scoped to
+`#user_addresses-group`. Also fixed the address equivalent of last
+task's ProductImage signal bug:
+`app_account/signals/promote_primary_address_after_delete.py` gated
+promotion on `instance.primary`, the same Django-formset-binding
+staleness issue already found and fixed for
+`app_product.signals.product_image`. `UserAddressModel.save()`'s
+existing invariant (locking, demotion, DB constraint,
+first-is-primary) needed no changes — confirmed correct, not rebuilt.
+
+**3. Field order → Country, State, City**: reordered both
+`UserAddressBaseForm.Meta.fields` (covers the standalone
+`UserAddressAdmin`) and `UserAddressInlineAdmin.fields` (overrides it
+for the inline) independently — same two-places lesson as the previous
+task's `ProductAdmin.fields`/`ProductForm`. Verified via
+`get_form`/`get_fieldsets()` directly for both, add and change.
+
+**4. Responsive inline layout**: new scoped CSS,
+`static/src/css/admin/user_address_inline.css`, loaded via
+`UserAddressInlineAdmin`'s own `class Media` (mirrors
+`markdown_editor.css`'s loading pattern). Caps the widest free-text
+columns' width, keeps short fields narrow, and makes the inline's own
+table scroll horizontally within its card at narrow viewports instead
+of widening the page. Kept `TabularInline` — a scoped CSS fix was
+enough, no justification to replace it with `StackedInline`.
+
+**5. Product Images real-time ordering — one-line fix, confirmed root
+cause**: `product_image_inline.js`'s "exclude deleted rows from the
+max-order computation" used `.closest(".dynamic-images")` — confirmed
+directly in the *installed* Django's own
+`admin/edit_inline/tabular.html` and `inlines.js` that this class is
+added only to rows cloned via "Add another"; an existing, already-saved
+row's `<tr>` only ever gets `"form-row"` (Django's
+`addInlineClickHandler` removes `"empty-form"` from the clone but never
+removes `"form-row"`, so that class is present on *every* row either
+way). This meant a pre-existing row marked for deletion was never
+actually excluded — wrong next position whenever editing a product
+that already had images, which is the common case. Fixed by matching
+`.form-row` instead.
+
+**Discovered mid-fix, not part of the original bug list**:
+`app_account/tests/factories/UserAddressFactory.py` picked
+`city`/`state`/`country` from three *independent* sub-factories — this
+had always been possible, just invisible until a new formset-level test
+built from real factory data tripped the previous task's
+`UserAddressBaseForm.clean()` consistency check. Fixed the factory to
+derive `state`/`country` from the chosen `city` via `LazyAttribute`.
+
+**Testing infrastructure, user-approved**: real automated coverage for
+all three admin JS files, not just manual steps — new `frontend/src/
+admin-js/` (`cityLocationSelect.test.ts`, `userAddressInline.test.ts`,
+`productImageInline.test.ts`, 14 tests), via a shared harness
+(`loadAdminScript.ts`) that `fs.readFileSync`s the actual shipped source
+and executes it inside a `JSDOM` window (`runScripts: "dangerously"`,
+needed for `document` to resolve as a bare global) built to match
+Django's real markup, then dispatches real `change`/`formset:added`
+events. This needed one small infrastructure change, confirmed with the
+user before making it: `docker-compose.yml`'s `frontend` service didn't
+have the repo root's `static/` directory accessible at all (only
+`./frontend:/app` was mounted) — added a read-only `./static:/repo-static:ro`
+mount so the tests can read the real files via the normal `npm run
+test` workflow going forward, not just a one-off invocation. Also added
+`tsconfig.admin-js.json` (a new project reference, mirroring the
+existing `tsconfig.app.json`/`tsconfig.node.json` split) scoping Node
+types to just `src/admin-js/**`, and `@types/jsdom` as a type-only
+devDependency (`jsdom` itself ships no types).
+
+**Verification**: `manage.py check`, `makemigrations --check --dry-run`
+(none needed), full `pytest` — 207 passed (no regressions), `ruff
+check`/`ruff format --check`/`mypy`/`basedpyright` all clean. `tsc -b`,
+`eslint .`, full Vitest — 96 passed, `npm run build`. Rendered admin
+field order re-verified live via `get_form`/`get_fieldsets()`; all 5
+new/changed static assets confirmed served correctly over the live
+Nginx/Django stack. **Not verified**: an actual browser click-through —
+no Chrome DevTools MCP connection was available this session either;
+the jsdom tests are real but synthetic-DOM coverage, and the responsive
+CSS layout has no automated check, documented as a manual-verification
+item instead.

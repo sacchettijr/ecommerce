@@ -36,8 +36,12 @@ planned work:
   needed.
 - Commit migrations to git, or make a deliberate, documented decision not
   to (and fix the contradictory `.gitignore` comments either way).
-- Add a frontend test framework before the frontend grows much further —
-  there is currently no safety net for regressions.
+- ~~Add a frontend test framework...~~ **Done** — Vitest + React Testing
+  Library has been in active use since 2026-10-13, with 96+ tests across
+  pages/components/hooks/the admin-JS jsdom harness as of 2026-10-16 (see
+  `testing.md`). The safety net exists now; the open question is
+  coverage *breadth* (most pages/components still have none), not
+  framework adoption.
 - If/when a cart is actually built, it is a from-scratch feature, not an
   extension of anything that exists today.
 

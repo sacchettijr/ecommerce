@@ -8,6 +8,15 @@
 - Global DRF default is `IsAuthenticated`; public endpoints explicitly opt
   out with `AllowAny`. Verify this stays true for any new endpoint — the
   secure default is "authenticated," not "public."
+- A third tier, `IsAdminUser` (DRF's built-in staff-only permission), is
+  now in use too — `app_address/api/viewsets/{StateListViewSet,
+  CityListViewSet}.py`, added 2026-10-16 to back the Django Admin's own
+  country→state→city cascading dropdowns (`/api/address/states/`,
+  `/api/address/cities/`). Not public, not just "any authenticated
+  user" — staff only, since these exist solely for an admin-only UI
+  with no other caller. First precedent for this tier in the project;
+  use it (not `IsAuthenticated`) for any future endpoint that only an
+  admin page should ever call.
 - `django-guardian` is installed and registered in
   `AUTHENTICATION_BACKENDS`/`INSTALLED_APPS` but has **zero actual usage**
   (no `assign_perm`, no per-object permission checks anywhere). It does not

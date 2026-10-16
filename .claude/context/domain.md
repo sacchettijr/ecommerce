@@ -110,13 +110,20 @@ CRUD endpoint in this project is not throttled by default.
 
 - `app_address/models/{CountryModel,StateModel,CityModel}.py` form a strict
   hierarchy (`Country ← State ← City`), each normalizing its `name` on
-  `save()`. These three have no standalone API of their own (still
-  admin-only, `app_address/admin/`) but each has a small read-only
-  nested serializer under `app_address/api/serializers/` (`CitySimpleSerializer`,
-  `StateSimpleSerializer`, `CountrySimpleSerializer` — `id`/`name` plus
-  `code`/`iso_code` respectively), consumed by `UserAddressSerializer`
-  (below) to show human-readable city/state/country names instead of
-  raw FK ids.
+  `save()`. Each has a small read-only serializer under
+  `app_address/api/serializers/`: `CountrySimpleSerializer` (`id`,
+  `name`, `iso_code`), `StateSimpleSerializer` (`id`, `name`, `code`,
+  `country`), `CitySimpleSerializer` (`id`, `name`, `state`, `country`
+  — the latter resolved via `source="state.country_id"`, not a direct
+  field). Two uses: nested inside `UserAddressSerializer` (below) to
+  show human-readable names instead of raw FK ids, and — **no longer
+  admin-only as of 2026-10-16** — as the response for the small
+  staff-only `/api/address/states/`/`/api/address/cities/` endpoints
+  that back the admin's own cascading dropdowns (see "Country/state/city
+  cascade" below and `api.md`). Country/State/City themselves are still
+  only *created/edited* via Django Admin — there is no create/update/
+  delete API for the reference data itself, only this read-only
+  filtering.
 - `UserAddressModel` extends `app_address.models.BaseAddressModel`, adds `user` (FK,
   `CASCADE`) and `primary` (bool). **The full invariant — zero addresses
   ⇒ zero primary; one or more addresses ⇒ exactly one primary — is
@@ -142,10 +149,27 @@ CRUD endpoint in this project is not throttled by default.
     signal. Covers both `instance.delete()` and `QuerySet.delete()` (checked
     via the signal's `origin` argument, same technique as the product
     precedent) and no-ops safely if the user itself was deleted too
-    (CASCADE).
+    (CASCADE). **Fixed 2026-10-16**: the promotion check used to gate on
+    `instance.primary` (the just-deleted Python object's attribute) —
+    but Django's admin ModelForm binds submitted field data onto
+    `form.instance` *before* calling `.delete()` on a row marked for
+    deletion, so an unchecked/omitted `primary` checkbox on the deleted
+    row's own form made `instance.primary` read `False` even when it
+    really was primary, silently skipping promotion. Now checks the
+    actual invariant ("addresses remain but none is primary") instead —
+    same fix already applied to `app_product.signals.product_image`.
   - `validate_constraints`/`_get_unique_checks` are overridden so admin
     inline formsets tolerate a transient multi-primary submission (the
     `save()` reorganization resolves it row by row).
+  - **Primary-selection admin JS (added 2026-10-16)**:
+    `static/src/js/admin/user_address_inline.js`, loaded via
+    `UserAddressInlineAdmin.Media.js`, mirrors
+    `product_image_inline.js`'s `is_primary` exclusivity listener —
+    checking one `primary` checkbox in `#user_addresses-group`
+    immediately unchecks every other one in the same group (no reload,
+    no submit; persisted only on a real Save). This is UX only — the
+    invariant above is what actually enforces it, including with
+    JavaScript disabled.
   - This task implemented the **listing and primary-selection** surface
     only — there is still no create/update/delete endpoint or UI for
     addresses (see below); the model/signal hardening above exists so
@@ -172,6 +196,83 @@ CRUD endpoint in this project is not throttled by default.
   `UserAddressInlineAdmin` (attached to `UserAdmin.inlines`) — still the
   only way to create or delete an address; no frontend or API path does
   either yet.
+- **Country/state/city cascade, admin-only** — scope is deliberately
+  narrow since there is no customer-facing address create/edit form to
+  extend (see above): the admin form (`UserAddressBaseForm`, shared by
+  both `UserAddressAdmin` and `UserAddressInlineAdmin`) is the only
+  place this applies. Field order is **Country, State, City** (changed
+  2026-10-16 from City/State/Country) — set independently in both
+  `UserAddressBaseForm.Meta.fields` (covers the standalone admin, which
+  has no `fields` of its own) and `UserAddressInlineAdmin.fields`
+  (overrides it for the inline) — same two-places lesson as
+  `ProductAdmin.fields`/`ProductForm`.
+  - City unambiguously implies state/country via FK
+    (`city.state.country`) — no uniqueness constraint on `name` anywhere
+    in `CountryModel`/`StateModel`/`CityModel`, so a name-based lookup
+    would be ambiguous, but the row's FK chain never is.
+  - **Two real bugs fixed 2026-10-16** in the original cascade: (1) the
+    `state` field used a plain `forms.Select`, so a freshly-rendered
+    state `<option>` had no `data-country` to read — picking a state
+    before any AJAX rebuild had happened silently did nothing. Fixed
+    with a new `StateLocationSelect` widget
+    (`app_address/forms/widgets/StateLocationSelect.py`, mirrors
+    `CityLocationSelect`), applied to `UserAddressBaseForm.state`. (2)
+    Rebuilding the city list after a state change replaced its
+    `<option>`s with ones carrying no `data-state`/`data-country` at
+    all (`CitySimpleSerializer` didn't return `state`/`country`), so
+    picking one of those rebuilt cities silently stopped syncing its
+    state/country — this is why state-first interfered with the
+    previously-working city-first flow. Fixed by adding `state` (plus a
+    derived `country`, via `source="state.country_id"`) to
+    `CitySimpleSerializer`, and generalizing the JS's option-rebuilding
+    helper to stamp both attributes on every rebuilt `<option>`
+    regardless of whether it's a state or a city row.
+  - Current flow, all in `static/src/js/admin/city_location_select.js`:
+    picking a **city** reads `data-state`/`data-country` straight off
+    its selected `<option>` (now always present, from either widget) and
+    sets both parent fields — no request needed. Picking a **state**
+    sets its country the same way, then re-fetches the state list for
+    that country (keeping the just-picked state selected — it's
+    guaranteed to be in that list) and the city list for that state.
+    Picking a **country** re-fetches the state list for it, clearing
+    state/city if they're no longer compatible, then the city list for
+    whatever the (possibly-cleared) state ends up being. A per-field
+    request counter discards a response if a newer request for the same
+    field has already started, so a fast double-change can't let a
+    stale response win — the only ordering hazard that exists, since
+    nothing here ever dispatches a synthetic `change` event (so there's
+    no event-loop risk to guard against).
+  - `app_address/api/viewsets/{StateListViewSet,CityListViewSet}.py`,
+    mounted at `/api/address/states/` and `/api/address/cities/`
+    (`app_address/urls.py`, registered in `PROJECT/urls.py` — `app_address`
+    had no API URLs at all before this). `permission_classes =
+    (IsAdminUser,)` (not `AllowAny` like the public product endpoints) —
+    these exist solely to back the admin's own dropdowns today, and
+    there's no other caller yet. `pagination_class = None`: a cascading
+    dropdown needs every matching row at once, not a paginated subset.
+  - Server-side validation: `UserAddressBaseForm.clean()` rejects a
+    `state` whose `country_id` doesn't match the submitted `country`,
+    and a `city` whose `state_id` doesn't match the submitted `state`,
+    as field-level errors — so the JS cascade is a UX convenience only,
+    never the actual enforcement, per a manually crafted or stale POST.
+    `UserAddressFactory` (test fixtures) used to pick `city`/`state`/
+    `country` from three *independent* sub-factories — harmless for
+    model-level tests, but it meant no factory-created address was
+    guaranteed to satisfy this validation; fixed to derive `state`/
+    `country` from the chosen `city` via `LazyAttribute`, so fixtures
+    are always internally consistent like a real address would be.
+- **Responsive inline layout (added 2026-10-16)**: the address inline
+  has 10 columns, which made the `TabularInline` row push the whole
+  admin page wider than necessary. Fixed with scoped CSS,
+  `static/src/css/admin/user_address_inline.css` (loaded via
+  `UserAddressInlineAdmin`'s own `class Media`, mirroring
+  `markdown_editor.css`'s loading pattern) — caps the widest free-text
+  columns' input width, keeps short fields (`number`/`postal_code`)
+  narrow, and makes the inline's own table scroll horizontally within
+  its card (`overflow-x: auto`, scoped to `#user_addresses-group`) at
+  narrow viewports instead of widening the page. Stayed with
+  `TabularInline` rather than switching to `StackedInline` — a smaller,
+  scoped CSS fix was enough.
 
 ## Product catalog (app_product, Django label `product`)
 
@@ -186,14 +287,85 @@ CRUD endpoint in this project is not throttled by default.
   (`UniqueConstraint(product, condition=Q(is_primary=True))`) and
   **gapless, unique `order`** (`UniqueConstraint(product, order)`,
   `Deferrable.DEFERRED` so a multi-row reorder inside one transaction
-  doesn't trip the constraint mid-flight). `save()` locks the parent
-  product row, demotes any other primary image if this one is marked
-  primary, then calls `organize_product_images()` to renumber `order` with
-  no gaps/duplicates — including moving an image to a *different* product
-  (closes the gap on the source product too). A `post_delete` signal
-  (`app_product/signals/product_image.py`) re-runs the same renumbering after
-  deletion and promotes `order=0` to primary if the deleted image was
-  primary and none remains.
+  doesn't trip the constraint mid-flight). `save()` auto-selects a
+  product's **first** image as primary regardless of what was submitted
+  (added 2026-10-16, mirrors `UserAddressModel`'s "first address is
+  primary" rule — before this, a product could have images with none
+  marked primary), locks the parent product row, demotes any other
+  primary image if this one is marked primary, then calls
+  `organize_product_images()` to renumber `order` with no gaps/duplicates
+  — including moving an image to a *different* product (closes the gap on
+  the source product too). A `post_delete` signal
+  (`app_product/signals/product_image.py`) re-runs the same renumbering
+  after deletion and promotes the image now at `order=0` to primary if
+  none remains primary. That promotion check is against the *current*
+  state of the remaining images (`images.exists() and not
+  images.filter(is_primary=True).exists()`), deliberately not against the
+  deleted `instance.is_primary` attribute: a discovered, real bug during
+  this work was that Django's admin inline formset binds submitted field
+  data (including an unchecked/omitted `is_primary` checkbox) onto
+  `form.instance` *before* calling `.delete()` on a row marked for
+  deletion, so `instance.is_primary` can be stale/wrong at the moment the
+  signal fires if that row's own form didn't resubmit a checked box.
+- **Product Images admin (`ProductImageInlineAdmin`)**: dynamic JS,
+  `static/src/js/admin/product_image_inline.js`, loaded via the inline's
+  `Media.js`. Scoped to `#images-group`: checking one `is_primary`
+  checkbox client-side unchecks every other one in the same formset
+  immediately (no reload); adding a new inline row pre-fills its
+  `order` input with `max(visible, non-deleted rows' order) + 1`, not a
+  row count, so it stays correct even with mid-formset gaps. Nothing
+  here persists anything — the actual invariants are still enforced
+  server-side as above, only on a real Save. **Bug fixed 2026-10-16**:
+  the "exclude deleted rows from the max" check used
+  `row.closest(".dynamic-images")` to find a row's container — but
+  confirmed directly against Django's own template
+  (`admin/edit_inline/tabular.html`) and `inlines.js`, that class is
+  only added to rows *cloned* via "Add another"; an existing,
+  already-saved row only ever has class `"form-row"`. So a pre-existing
+  row marked for deletion was never actually excluded, giving a wrong
+  next position whenever editing a product that already had images
+  (the common case). Fixed by matching `.form-row` instead, which is
+  present on both existing and newly-added rows.
+- **Product admin field order**: `ProductAdmin.fields` (explicit, both
+  add and change forms) is `active, category, name, slug, price,
+  thumbnail, description` — `slug` is `readonly_fields`, interleaved via
+  this explicit tuple rather than left to Django's default of appending
+  readonly fields after every editable one. The list page configuration
+  (`list_display`/`list_filter`/`search_fields`) is untouched.
+
+## Catalog ordering and randomization (added 2026-10-16)
+
+`ProductSimpleListViewSet` (backs both `/` and `/products` on the frontend —
+same endpoint, the homepage just sends no `ordering` param) defaults to a
+**deterministic, daily-seeded pseudo-random order**, not `-created_at`
+anymore. `get_queryset()` annotates every row with
+`MD5(Concat(Cast("id", CharField()), Value(seed)))` where
+`seed = timezone.now().date().isoformat()`, and `ordering = ("_shuffle",)`
+is the view's default (`StableOrderingFilter` still appends a `pk`
+tie-breaker). `_shuffle` is **not** in `ordering_fields`, so an explicit
+`?ordering=name|price|created_at|...` from the frontend's sort dropdown
+still overrides it exactly as before.
+
+- **Why a daily seed, not per-request or per-session**: `order_by("?")`
+  reshuffles every request, breaking pagination (page 2 can repeat/skip
+  products relative to page 1) — ruled out. A per-visitor session seed
+  gives the same stability but adds real state (session writes, cache
+  invalidation) for a catalog this size — not worth it yet. A seed fixed
+  per calendar day is stateless, cheap at this scale (no index needed for
+  `ORDER BY md5(...)` with a catalog in the tens-to-low-thousands), and
+  solves the actual complaint ("a bulk-imported category dominates page 1
+  because it's most recent") immediately: a newly-imported batch gets an
+  uncorrelated hash the moment it's inserted, not after `created_at` ages
+  out. Trade-off: everyone sees the same order on a given day, and it
+  fully reshuffles at midnight UTC — revisit with a per-visitor seed only
+  if "different shuffle per visitor" becomes an actual requirement.
+- Frontend: `frontend/src/components/product/productSort.ts` has a
+  `"featured"` sentinel (now `DEFAULT_PRODUCT_SORT`) meaning "send no
+  `ordering` param at all" — `ProductListPage.tsx` omits the query param
+  entirely for it, letting the backend default apply. It's a real,
+  visible option in the sort dropdown (`t.product.sortFeatured`), not just
+  an implicit default — existing options (Newest/Price/Name, both
+  directions) are unchanged and still explicit overrides.
 
 ## Wishlist (`account.UserWishlistModel`/`UserWishlistItemModel`, app_account)
 
