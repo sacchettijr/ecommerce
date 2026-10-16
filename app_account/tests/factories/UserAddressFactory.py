@@ -1,17 +1,26 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
-from factory.declarations import SubFactory
+from factory.declarations import LazyAttribute, SubFactory
 from factory.django import DjangoModelFactory
 from factory.faker import Faker
 
 from app_account.models import UserAddressModel
 from app_account.tests.factories.UserFactory import UserFactory
-from app_address.tests.factories import CityFactory, CountryFactory, StateFactory
+from app_address.models import CountryModel, StateModel
+from app_address.tests.factories import CityFactory
 
 if TYPE_CHECKING:
     BaseDjangoModelFactory = DjangoModelFactory[UserAddressModel]
 else:
     BaseDjangoModelFactory = DjangoModelFactory
+
+
+def state_of_city(address: UserAddressModel) -> StateModel:
+    return cast(StateModel, cast(Any, address).city.state)
+
+
+def country_of_city(address: UserAddressModel) -> CountryModel:
+    return cast(CountryModel, cast(Any, address).city.state.country)
 
 
 class UserAddressFactory(BaseDjangoModelFactory):
@@ -37,11 +46,14 @@ class UserAddressFactory(BaseDjangoModelFactory):
     city = SubFactory(
         factory=CityFactory,
     )
-    state = SubFactory(
-        factory=StateFactory,
+    #   Derived from city, not an independent SubFactory - a UserAddressModel's
+    #   country/state/city must agree with each other (enforced server-side by
+    #   UserAddressBaseForm.clean()), so the factory's own output should too.
+    state = LazyAttribute(
+        function=state_of_city,
     )
-    country = SubFactory(
-        factory=CountryFactory,
+    country = LazyAttribute(
+        function=country_of_city,
     )
 
     class Meta:

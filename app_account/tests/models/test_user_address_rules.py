@@ -1,10 +1,13 @@
-from typing import cast
+from typing import Any, cast
 
 import pytest
 from django.db import IntegrityError, connection, transaction
+from django.forms import inlineformset_factory
 
+from app_account.forms import UserAddressBaseForm
 from app_account.models import UserAddressModel, UserModel
 from app_account.tests.factories import UserAddressFactory, UserFactory
+from app_address.tests.factories import CityFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -179,3 +182,133 @@ def test_invariants_hold_after_the_operations_are_committed() -> None:
 
     assert len(primaries(user)) == 1
     assert UserAddressModel.objects.filter(user=user).count() == 4
+
+
+# ---------------------------------------------------------- admin (inline formset)
+
+
+def address_formset_class(extra: int) -> Any:
+    return inlineformset_factory(
+        UserModel,
+        UserAddressModel,
+        form=UserAddressBaseForm,
+        fk_name="user",
+        fields=(
+            "primary",
+            "street",
+            "number",
+            "complement",
+            "reference",
+            "district",
+            "postal_code",
+            "country",
+            "state",
+            "city",
+        ),
+        extra=extra,
+    )
+
+
+def formset_data(rows: list[dict[str, Any]], initial: int) -> dict[str, Any]:
+    prefix = "user_addresses"
+    data: dict[str, Any] = {
+        f"{prefix}-TOTAL_FORMS": str(len(rows)),
+        f"{prefix}-INITIAL_FORMS": str(initial),
+        f"{prefix}-MIN_NUM_FORMS": "0",
+        f"{prefix}-MAX_NUM_FORMS": "1000",
+    }
+    for index, row in enumerate(rows):
+        for key, value in row.items():
+            data[f"{prefix}-{index}-{key}"] = value
+    return data
+
+
+def row_from(address: UserAddressModel, **overrides: Any) -> dict[str, Any]:
+    #   Resubmits the address's own current field values unchanged - matches what a
+    #   real admin round-trip sends for a row the administrator didn't touch, so
+    #   form.has_changed() is correctly False for it and save() isn't re-triggered
+    #   with a blank "primary" checkbox overwriting a promotion from a sibling row's
+    #   deletion. A fresh/unrelated fake row (base_row()) would make every row look
+    #   "changed", which isn't realistic and isn't what these tests are about.
+    address_any = cast(Any, address)
+    row: dict[str, Any] = {
+        "id": address.pk,
+        "street": address.street,
+        "number": address.number,
+        "complement": address.complement,
+        "reference": address.reference,
+        "district": address.district,
+        "postal_code": address.postal_code,
+        "country": address_any.country_id,
+        "state": address_any.state_id,
+        "city": address_any.city_id,
+    }
+    row.update(overrides)
+    return row
+
+
+def base_row(**overrides: Any) -> dict[str, Any]:
+    city = cast(Any, CityFactory())
+    row: dict[str, Any] = {
+        "street": "Main St",
+        "number": "123",
+        "complement": "",
+        "reference": "",
+        "district": "Downtown",
+        "postal_code": "00000-000",
+        "country": city.state.country_id,
+        "state": city.state_id,
+        "city": city.pk,
+    }
+    row.update(overrides)
+    return row
+
+
+def test_formset_deleting_the_primary_and_its_replacement_in_the_same_submission() -> None:
+    user = make_user()
+    first = add(user, primary=True)
+    second = add(user)
+    third = add(user)
+
+    data = formset_data(
+        [
+            row_from(first, DELETE="on"),
+            row_from(second, DELETE="on"),
+            row_from(third),
+        ],
+        initial=3,
+    )
+    formset = address_formset_class(extra=0)(data, {}, instance=user, prefix="user_addresses")
+
+    assert formset.is_valid(), formset.errors
+    with transaction.atomic():
+        formset.save()
+
+    connection.check_constraints()
+    assert UserAddressModel.objects.filter(pk__in=[first.pk, second.pk]).exists() is False
+    #   Only "third" survives: it must end up primary, never a deleted row.
+    assert primaries(user) == [third.pk]
+
+
+def test_formset_operations_do_not_affect_another_users_addresses() -> None:
+    user_1, user_2 = make_user(), make_user()
+    first = add(user_1, primary=True)
+    second = add(user_1)
+    other = add(user_2, primary=True)
+
+    data = formset_data(
+        [
+            row_from(first, DELETE="on"),
+            row_from(second),
+        ],
+        initial=2,
+    )
+    formset = address_formset_class(extra=0)(data, {}, instance=user_1, prefix="user_addresses")
+
+    assert formset.is_valid(), formset.errors
+    with transaction.atomic():
+        formset.save()
+
+    assert primaries(user_1) == [second.pk]
+    assert primaries(user_2) == [other.pk]
+    assert is_primary(other) is True

@@ -14,6 +14,7 @@ export function ProductSortSelect() {
     const { t } = useLanguage();
 
     const labels: Record<ProductSort, string> = {
+        featured: t.product.sortFeatured,
         "-created_at": t.product.sortRecent,
         name: t.product.sortNameAsc,
         "-name": t.product.sortNameDesc,

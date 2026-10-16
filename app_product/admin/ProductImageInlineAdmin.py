@@ -33,6 +33,9 @@ class ProductImageInlineAdmin(BaseProductImageAdmin):
     )
     readonly_fields = ("image_preview",)
 
+    class Media:
+        js = ("src/js/admin/product_image_inline.js",)
+
     @admin.display(
         description=_(
             message="Preview",

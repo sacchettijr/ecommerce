@@ -104,6 +104,11 @@ class ProductImageModel(BaseModel):
 
             siblings = type(self).objects.filter(product_id=product_id)
 
+            #   A product's first image is always its primary one, regardless of what the
+            #   caller submitted — mirrors UserAddressModel's "first address is primary" rule.
+            if self._state.adding and not siblings.exists():
+                self.is_primary = True
+
             if cast(bool, self.is_primary):
                 siblings.exclude(pk=self.pk).filter(is_primary=True).update(
                     is_primary=False,

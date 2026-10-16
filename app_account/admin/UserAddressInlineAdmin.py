@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib import admin
 
@@ -31,7 +31,13 @@ class UserAddressInlineAdmin(BaseUserAddressInlineAdmin):
         "reference",
         "district",
         "postal_code",
-        "city",
-        "state",
         "country",
+        "state",
+        "city",
     )
+
+    class Media:
+        css: ClassVar[dict[str, tuple[str, ...]]] = {
+            "all": ("src/css/admin/user_address_inline.css",),
+        }
+        js = ("src/js/admin/user_address_inline.js",)

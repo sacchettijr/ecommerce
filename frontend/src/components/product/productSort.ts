@@ -1,5 +1,8 @@
-// Valores aceitos por `ordering` em /api/product/products/ (ver ProductSimpleListViewSet).
+// Values accepted by `ordering` in /api/product/products/ (see ProductSimpleListViewSet),
+// plus "featured": a frontend-only sentinel meaning "send no ordering param at all", which
+// lets the backend's randomized default (ProductSimpleListViewSet._shuffle) apply.
 export const PRODUCT_SORT_OPTIONS = [
+    "featured",
     "-created_at",
     "name",
     "-name",
@@ -9,7 +12,7 @@ export const PRODUCT_SORT_OPTIONS = [
 
 export type ProductSort = (typeof PRODUCT_SORT_OPTIONS)[number];
 
-export const DEFAULT_PRODUCT_SORT: ProductSort = "-created_at";
+export const DEFAULT_PRODUCT_SORT: ProductSort = "featured";
 
 export function isProductSort(value: string): value is ProductSort {
     return PRODUCT_SORT_OPTIONS.some((option) => option === value);

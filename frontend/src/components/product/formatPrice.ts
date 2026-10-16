@@ -1,7 +1,8 @@
-// Moeda da loja (sempre R$), independente do idioma da interface.
-const currency = new Intl.NumberFormat("pt-BR", {
+// Store currency is always USD, independent of the UI language. This is a
+// presentation-only format: it does not convert the underlying numeric value.
+const currency = new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "BRL",
+    currency: "USD",
 });
 
 export function formatPrice(value: number): string {

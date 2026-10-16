@@ -1,11 +1,12 @@
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 
 import { ApiError } from "../api/client.ts";
 import { fetchProduct } from "../api/products.ts";
+import { ExpandableDescription } from "../components/product/ExpandableDescription.tsx";
 import { ImageCarousel } from "../components/product/ImageCarousel.tsx";
+import { ProductBreadcrumb } from "../components/product/ProductBreadcrumb.tsx";
 import { ProductPrice } from "../components/product/ProductPrice.tsx";
 import { CartPlusIcon, HeartIcon } from "../components/ui/icons.tsx";
-import { Markdown } from "../components/ui/Markdown.tsx";
 import { useAsync } from "../hooks/useAsync.ts";
 import { useLanguage } from "../i18n/useLanguage.ts";
 import { NotFoundPage } from "./NotFoundPage.tsx";
@@ -43,28 +44,11 @@ function ProductDetail({ slug }: { slug: string }) {
             <title>{`${data.name} | E-Commerce`}</title>
 
             <div className="mx-auto max-w-7xl px-4 py-12">
-                <nav aria-label={t.product.breadcrumbLabel} className="mb-6">
-                    <ol className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
-                        <li>
-                            <Link to="/" className="hover:underline">
-                                {t.nav.home}
-                            </Link>
-                        </li>
-                        <li aria-hidden="true">/</li>
-                        <li>
-                            <Link
-                                to={`/category/${data.category.slug}`}
-                                className="hover:underline"
-                            >
-                                {data.category.name}
-                            </Link>
-                        </li>
-                        <li aria-hidden="true">/</li>
-                        <li aria-current="page" className="text-gray-900">
-                            {data.name}
-                        </li>
-                    </ol>
-                </nav>
+                <ProductBreadcrumb
+                    categoryName={data.category.name}
+                    categorySlug={data.category.slug}
+                    productName={data.name}
+                />
 
                 <div className="grid items-start gap-8 md:grid-cols-2">
                     <ImageCarousel
@@ -105,7 +89,9 @@ function ProductDetail({ slug }: { slug: string }) {
                                 <h2 className="mb-2 text-xl font-semibold">
                                     {t.product.descriptionTitle}
                                 </h2>
-                                <Markdown>{data.description}</Markdown>
+                                <ExpandableDescription
+                                    description={data.description}
+                                />
                             </section>
                         )}
                     </div>

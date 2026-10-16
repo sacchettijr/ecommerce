@@ -11,10 +11,18 @@ else:
 
 
 class CitySimpleSerializer(BaseCitySimpleSerializer):
+    #   Not a direct CityModel field - resolved through state.country_id so the
+    #   admin's cascading JS can stamp a rebuilt <option> with the same
+    #   data-country it would get from a server-rendered one (see
+    #   CityLocationSelect / StateLocationSelect).
+    country = serializers.IntegerField(source="state.country_id")
+
     class Meta:
         model = CityModel
         fields = (
             "id",
             "name",
+            "state",
+            "country",
         )
         read_only_fields = fields

@@ -28,6 +28,8 @@ export function ProductListPage() {
         ? categories.find((item) => item.slug === slug)
         : undefined;
 
+    const sort = getProductSort(searchParams);
+
     const query = new URLSearchParams();
     if (slug) {
         query.set("category", slug);
@@ -35,7 +37,9 @@ export function ProductListPage() {
     if (search) {
         query.set("search", search);
     }
-    query.set("ordering", getProductSort(searchParams));
+    if (sort !== "featured") {
+        query.set("ordering", sort);
+    }
     query.set("page", String(page));
     const queryKey = query.toString();
 

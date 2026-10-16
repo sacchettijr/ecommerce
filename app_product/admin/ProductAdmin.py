@@ -45,6 +45,19 @@ class ProductAdmin(BaseProductAdmin):
 
     readonly_fields = ("slug",)
 
+    #   Explicit so slug (readonly) is interleaved at the right spot instead of being
+    #   appended after every editable field, which is Django admin's default for a
+    #   readonly field not mentioned in `fields`.
+    fields = (
+        "active",
+        "category",
+        "name",
+        "slug",
+        "price",
+        "thumbnail",
+        "description",
+    )
+
     inlines = (ProductImageInlineAdmin,)
 
     class Media:

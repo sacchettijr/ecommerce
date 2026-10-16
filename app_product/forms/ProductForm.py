@@ -34,11 +34,11 @@ class ProductForm(
         model = ProductModel
         fields = (
             "active",
-            "name",
             "category",
-            "description",
+            "name",
             "price",
             "thumbnail",
+            "description",
         )
         widgets: ClassVar[dict[str, type[forms.Widget]]] = {
             "description": MarkdownEditorWidget,

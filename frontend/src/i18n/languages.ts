@@ -16,7 +16,7 @@ export const LANGUAGES: LanguageInfo[] = [
     { code: "it", nativeName: "Italiano", flag: "/img/locale/it.png" },
 ];
 
-export const DEFAULT_LANGUAGE: LanguageCode = "pt-br";
+export const DEFAULT_LANGUAGE: LanguageCode = "en";
 
 export function isLanguageCode(value: string): value is LanguageCode {
     return LANGUAGES.some((language) => language.code === value);

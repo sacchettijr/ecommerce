@@ -1,0 +1,43 @@
+/* The User Address inline has 10 columns (primary + 6 free-text fields +
+   country/state/city) - without this, the row forces the whole admin page
+   wider than it needs to be. Scoped to this inline's own group so it can't
+   affect ProductAdmin or any other page. */
+
+#user_addresses-group {
+    overflow-x: auto;
+}
+
+#user_addresses-group .field-primary {
+    width: 2rem;
+    text-align: center;
+}
+
+#user_addresses-group .field-street input,
+#user_addresses-group .field-complement input,
+#user_addresses-group .field-reference input {
+    width: 9rem;
+}
+
+#user_addresses-group .field-number input,
+#user_addresses-group .field-postal_code input {
+    width: 5rem;
+}
+
+#user_addresses-group .field-district input {
+    width: 7rem;
+}
+
+#user_addresses-group .field-country select,
+#user_addresses-group .field-state select,
+#user_addresses-group .field-city select {
+    max-width: 9rem;
+}
+
+/* Below this, individual field widths can no longer shrink further without
+   becoming unusable - overflow-x above takes over and the row scrolls
+   within the inline card instead of widening the whole page. */
+@media (max-width: 768px) {
+    #user_addresses-group table {
+        min-width: 55rem;
+    }
+}

@@ -56,9 +56,12 @@ export interface Translations {
         sortNameDesc: string;
         sortPriceAsc: string;
         sortPriceDesc: string;
+        sortFeatured: string;
         loadError: string;
         breadcrumbLabel: string;
         descriptionTitle: string;
+        readMore: string;
+        showLess: string;
         noProductImage: string;
         addToCartLabel: string;
         addToWishlist: string;

@@ -73,6 +73,13 @@ urlpatterns: list[URLPattern | URLResolver] = [
         ),
         name="url_product",
     ),
+    path(
+        route="api/address/",
+        view=include(
+            arg="app_address.urls",
+        ),
+        name="url_address",
+    ),
 ]
 
 

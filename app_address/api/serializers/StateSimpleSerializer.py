@@ -17,5 +17,6 @@ class StateSimpleSerializer(BaseStateSimpleSerializer):
             "id",
             "name",
             "code",
+            "country",
         )
         read_only_fields = fields

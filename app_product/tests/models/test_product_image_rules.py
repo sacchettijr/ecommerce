@@ -81,12 +81,30 @@ def reload(image: ProductImageModel) -> ProductImageModel:
 # ---------------------------------------------------------- is_primary
 
 
-def test_product_without_primary_stays_without_primary() -> None:
+def test_the_first_image_is_automatically_primary() -> None:
     product = make_product()
-    add(product, 0)
-    add(product, 1)
 
-    assert primaries(product) == []
+    first = add(product, 0)
+
+    assert primaries(product) == [first.pk]
+
+
+def test_the_first_image_is_primary_even_when_explicitly_submitted_as_not_primary() -> None:
+    product = make_product()
+
+    first = add(product, 0, primary=False)
+
+    assert primaries(product) == [first.pk]
+
+
+def test_a_second_image_does_not_become_primary_automatically() -> None:
+    product = make_product()
+    first = add(product, 0)
+
+    second = add(product, 1)
+
+    assert is_primary(second) is False
+    assert primaries(product) == [first.pk]
 
 
 def test_single_primary() -> None:
@@ -441,6 +459,32 @@ def test_inline_formset_swapping_the_order_of_two_existing_images() -> None:
     connection.check_constraints()
     assert ids_in_order(product) == [b.pk, a.pk]
     assert orders(product) == [0, 1]
+
+
+def test_inline_formset_deleting_the_primary_and_adding_a_new_image_together() -> None:
+    product = make_product()
+    a, b = add(product, 0, primary=True), add(product, 1)
+    data = formset_data(
+        [
+            {"id": a.pk, "product": product.pk, "order": "0", "DELETE": "on"},
+            {"id": b.pk, "product": product.pk, "order": "1"},
+            {"order": "2"},
+        ],
+        initial=2,
+    )
+    files = {"images-2-image": png("new.png")}
+    formset = image_formset_class(extra=1)(data, files, instance=product, prefix="images")
+
+    assert formset.is_valid(), formset.errors
+    with transaction.atomic():
+        formset.save()
+
+    connection.check_constraints()
+    assert ProductImageModel.objects.filter(pk=a.pk).exists() is False
+    assert orders(product) == [0, 1]
+    #   The deleted image was primary: exactly one of the two survivors is promoted,
+    #   never zero, and never the one that was being deleted in the same submission.
+    assert len(primaries(product)) == 1
 
 
 # ---------------------------------------------------------- API (read-only)

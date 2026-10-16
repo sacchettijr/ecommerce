@@ -9,7 +9,7 @@ from .base import BASE_DIR
 
 LANGUAGE_CODE: str = env(
     name="LANGUAGE_CODE",
-    default="pt-br",
+    default="en",
 )
 
 LANGUAGES = (
@@ -22,7 +22,7 @@ LOCALE_PATHS = (BASE_DIR / "locale",)
 
 TIME_ZONE: str = env(
     name="TIME_ZONE",
-    default="America/Manaus",
+    default="America/New_York",
 )
 
 USE_I18N = True

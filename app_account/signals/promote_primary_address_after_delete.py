@@ -34,9 +34,12 @@ def promote_primary_address_after_delete(
 
         addresses = UserAddressModel.objects.filter(user_id=user_id)
 
-        if not cast(bool, instance.primary):
-            return
-
+        #   Checking the invariant directly ("addresses remain but none is primary")
+        #   rather than trusting instance.primary: when a ModelForm deletes a row (admin
+        #   inline formset), Django binds the submitted field data onto form.instance
+        #   before deleting it, so instance.primary can reflect an unchecked/omitted
+        #   checkbox rather than the address's actual last-known state in the database
+        #   (same bug confirmed and fixed in app_product.signals.product_image).
         if addresses.exists() and not addresses.filter(primary=True).exists():
             first = addresses.order_by("created_at").first()
             if first is not None:

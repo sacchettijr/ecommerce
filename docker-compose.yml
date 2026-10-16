@@ -146,6 +146,10 @@ services:
         volumes:
             - ./frontend:/app
             - frontend_node_modules:/app/node_modules
+            #   Read-only: lets the jsdom-based admin-JS tests (src/admin-js/) read the
+            #   real static/src/js/admin/*.js source Django actually serves, since it
+            #   otherwise lives outside this container entirely.
+            - ./static:/repo-static:ro
         env_file:
             - .env
         expose:
