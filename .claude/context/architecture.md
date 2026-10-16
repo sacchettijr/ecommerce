@@ -42,9 +42,20 @@ Render today, by explicit documented tradeoff, not by accident.
   regardless of caller lives in models (`save()` overrides, `Meta.constraints`)
   or signals, not in viewsets/serializers — see `ProductImageModel`
   (`app_product/models/ProductImageModel.py`) as the project's best example of
-  this pattern. `UserAddressModel.save()` follows the same pattern (see
-  `domain.md`) — if you add an address API, reuse the model's rule rather
-  than duplicating it in a new serializer.
+  this pattern. `UserAddressModel.save()` plus
+  `app_account/signals/promote_primary_address_after_delete.py` follow the
+  same pattern for the primary-address invariant (see `domain.md`) —
+  `UserAddressViewSet.set_primary` is a thin wrapper that just calls
+  `.save()`, with zero invariant logic of its own.
+  `UserWishlistItemModel.save()` plus `app_account/signals/
+  reorganize_wishlist_items_after_delete.py` follow the same `save()`+
+  `post_delete`-signal split for its gap-free `position` field, mirroring
+  `ProductImageModel`'s `order`/`app_product.signals.product_image.py`
+  pair directly (see `domain.md`). `app_account/signals/
+  create_wishlist_for_new_user.py` (a `post_save` receiver on `UserModel`)
+  is the reference example for "must happen on every creation path
+  regardless of caller" — a signal connected once in `AppConfig.ready()`,
+  not a service function every call site would need to remember to invoke.
 - **Celery tasks are dispatch-and-forget from the caller's perspective.**
   `utils/dispatch_task.py` wraps every Celery dispatch in a try/except that
   logs and swallows broker-connection failures — callers (viewsets) always
@@ -73,28 +84,100 @@ Render today, by explicit documented tradeoff, not by accident.
   through this wrapper (via small per-domain modules like `products.ts`,
   `auth.ts`), not ad-hoc `fetch()` calls in components.
 - **Route guarding**: `frontend/src/auth/ProtectedRoute.tsx` wraps
-  account-only routes (currently just `/profile` in `App.tsx`). It only
-  blocks the authenticated page from flashing before a redirect to
-  `/login?next=...` (reusing the existing `withNext`/`safeNext`
+  account-only routes (`/profile`, `/profile/edit`, `/profile/password`,
+  `/profile/addresses` in `App.tsx`).
+  It only blocks the authenticated page from flashing before a redirect
+  to `/login?next=...` (reusing the existing `withNext`/`safeNext`
   convention) — the real enforcement is still the backend requiring a
   valid session for any endpoint that returns private data. Add new
   account-only routes by wrapping them the same way, not by inventing a
   second guard mechanism.
 - **Authenticated account area**: `frontend/src/components/account/AccountLayout.tsx`
-  is the shared layout for account-only pages (currently just
-  `frontend/src/pages/ProfilePage.tsx`, at `/profile`) — a sidebar nav
-  (reusing `userMenu.*` translation keys, mirroring `UserMenu.tsx`'s
-  dropdown items) plus a content region and a message/alert area. New
-  account pages (edit profile, orders, addresses, wishlist — none exist
+  is the shared layout for account-only pages
+  (`frontend/src/pages/ProfilePage.tsx` at `/profile`,
+  `frontend/src/pages/ProfileEditPage.tsx` at `/profile/edit`,
+  `frontend/src/pages/PasswordChangePage.tsx` at `/profile/password`,
+  `frontend/src/pages/AddressListPage.tsx` at `/profile/addresses`) — a
+  sidebar nav (reusing `userMenu.*` translation keys, mirroring
+  `UserMenu.tsx`'s dropdown items) plus a content region and a
+  message/alert area. New account pages (orders, wishlist — none exist
   yet) should nest inside this layout rather than duplicating its sidebar
   or message handling.
-- **Per-page message/alert state**: `frontend/src/hooks/useMessages.ts`
-  is a small reusable hook (`{ messages, addMessage, dismissMessage }`,
-  local `useState`, not global) that any authenticated page can use to
-  queue dismissible `Alert`s (success/error/info/warning) — the closest
-  equivalent to Django's `messages` framework this project has.
-  `components/ui/Alert.tsx` now supports an optional `onDismiss`/
-  `dismissLabel` pair (discriminated union: both or neither) for this.
+- **Local-override pattern for a fetched list the UI also mutates**:
+  `AddressListPage.tsx` is the reference — `useAsync(fetchUserAddresses, undefined)`
+  supplies the initial load, and a local `override` state (same shape as
+  `AuthProvider`'s own `override`) takes precedence once the user
+  switches their primary address, set directly from the mutation
+  endpoint's response rather than re-fetching. Combined with a
+  `requestTokenRef` (incremented per selection, compared on response —
+  a response whose token no longer matches the latest is discarded) and
+  an `AbortController` (the previous in-flight request is aborted when a
+  new one starts, reusing `apiPost`'s existing optional `AbortSignal`
+  parameter), this is how a rapid "select A, then immediately select B"
+  sequence resolves to B's authoritative result without A's late
+  response corrupting it — see `domain.md` for how the backend's own
+  locking makes the *data* consistent regardless of request arrival
+  order; this is what keeps the *frontend* from displaying something
+  inconsistent with whatever the backend ends up persisting.
+- **Accessible tooltip for icon-only controls**: `frontend/src/components/ui/Tooltip.tsx`
+  wraps a single trigger element, injecting `aria-describedby` onto it
+  (via `cloneElement`) and showing a floating label on both
+  `group-hover` and `group-focus-within` (so it works for mouse and
+  keyboard alike). First introduced for `AddressListPage.tsx`'s
+  Add/Edit/Delete icon buttons — reuse it for any future icon-only
+  control rather than a one-off implementation.
+- **Inert-but-focusable controls use `aria-disabled`, never the native
+  `disabled` attribute.** A natively `disabled` button cannot receive
+  keyboard focus, which would make it impossible for a keyboard user to
+  ever see its tooltip — `aria-disabled="true"` keeps it focusable while
+  still being unambiguously non-interactive (no `onClick` is attached at
+  all, rather than attaching a no-op one). See `AddressListPage.tsx`'s
+  Add/Edit/Delete buttons.
+- **Refreshing the current-user state after a write**: `ProfileEditPage.tsx`
+  is the reference for this — on success it calls `setUser(freshUser)`
+  (from `useAuth()`) with the backend's response, which is the *same*
+  `AuthContext` state `AuthProvider`/`LoginPage`/`UserMenu`'s logout
+  already mutate. This propagates everywhere reactively (navbar greeting,
+  `ProfilePage`) with no second fetch, no reload, and no second source of
+  truth for the current user's data. Follow this pattern for any future
+  page that mutates the current user.
+- **Action-scoped message/alert state**: `frontend/src/hooks/useMessages.ts`
+  returns `{ messages, beginAction, replaceMessages, dismissMessage }` —
+  the closest equivalent to Django's `messages` framework this project
+  has, but scoped to one user action at a time rather than accumulating
+  forever. Call `beginAction()` when a new attempt starts (e.g. a form
+  submit) — it clears whatever the previous action left on screen and
+  returns a token — then call `replaceMessages(token, [...])` once that
+  attempt's outcome is known, with every message it produced (zero, one,
+  or several of different variants, all shown together). A
+  `replaceMessages` call carrying a token from an action that's no longer
+  current is silently ignored, so a late response from a superseded
+  submission can never resurrect a stale notification. See
+  `PasswordChangePage.tsx` for the reference usage, including reacting to
+  `useApiForm`'s own general-error state via a `useEffect` (necessary
+  because reading that state synchronously right after `await
+  form.submit(...)` would be stale — React hasn't re-rendered yet at that
+  point in the same event handler). `components/ui/Alert.tsx` supports an
+  optional `onDismiss`/`dismissLabel` pair (discriminated union: both or
+  neither) for the dismiss button these render with.
+- **Phone input filters out letters as the user types.**
+  `frontend/src/components/ui/sanitizePhoneInput.ts` (`value.replace(/\p{L}/gu, "")`)
+  strips any Unicode letter, keeping digits/spaces/`+`/`-`/parentheses
+  untouched; `SignupPage.tsx` and `ProfileEditPage.tsx` both wire it into
+  their phone field via a dedicated `onChange` handler (calling
+  `form.setValues` directly) instead of the generic `form.onChange` other
+  fields use. `ContactPage.tsx` also has a phone field but was
+  deliberately left out of this — not asked for, and out of scope. The
+  backend's `PhoneNumberField`/validators remain the real format
+  authority; this is purely a typing-experience filter.
+- **`useApiForm.generalErrors` is memoized** (`frontend/src/hooks/useApiForm.ts`,
+  `useMemo` keyed on the underlying `generalMessages` state and the
+  current language) — its reference only changes when the error state
+  genuinely changes. This matters if you ever put it in a `useEffect`
+  dependency array: before this was memoized, a naive effect depending on
+  it looped forever (new array reference every render → effect refires →
+  triggers another render → ad infinitum), a real bug hit and fixed while
+  building the password-change notification flow.
 
 ## Design decisions worth preserving
 

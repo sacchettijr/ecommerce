@@ -40,37 +40,138 @@ Only rules actually verified in source code are documented here.
    response whether or not the account/email exists** — explicit,
    commented anti-enumeration behavior. Do not change this without
    understanding the security tradeoff (see `security.md`).
+6. **Self-service password change** (`PasswordChangeViewSet`, mounted at
+   `/api/account/password-change/`) is separate from the password-reset
+   flow above — it's for an already-authenticated user changing their own
+   password, not a forgotten-password recovery. Uses the global default
+   `IsAuthenticated` permission (no `AllowAny`) and
+   `app_account/forms/PasswordChangeForm.py` (a subclass of
+   `django.contrib.auth.forms.PasswordChangeForm`, with one added rule —
+   see point 7 below), constructed with
+   `request.user` — **no user identifier is ever read from the request
+   body**, so a client cannot change another account's password by
+   supplying an id/email in the payload (verified by a test that
+   deliberately smuggles another user's id/email into the request and
+   asserts only `request.user`'s password changes). Requires the correct
+   current password (`old_password`, field-level `password_incorrect`
+   error otherwise) and validates the new one against
+   `AUTH_PASSWORD_VALIDATORS` (above). On success, calls
+   `update_session_auth_hash()` so the current session stays valid instead
+   of being silently logged out mid-request — this is a deliberate
+   difference from the password-reset-via-email flow, which happens
+   outside any existing session.
+7. **The new password must differ from the current one.**
+   `PasswordChangeForm.clean()` compares the submitted `new_password1`
+   against the user's *stored* hash via `self.user.check_password(...)`
+   (never a raw string comparison against `old_password`), and only once
+   `old_password` itself already cleaned successfully — so an incorrect
+   current password still produces only its own field error, never also
+   this one. A match raises a **non-field** `ValidationError` with
+   `code="password_unchanged"`, which `form_errors_payload` surfaces as
+   `{"non_field_errors": [...], "code": "password_unchanged"}` — same
+   400 response shape as every other account error, reusing the
+   established `code` convention rather than inventing a new response
+   format. The frontend (`PasswordChangePage.tsx`) recognizes this
+   specific code and renders it as a `warning`-variant notification
+   through the shared `useMessages` mechanism, not as a success and not
+   as a generic red error.
+8. **Self-service profile editing** (`ProfileUpdateViewSet`, mounted at
+   `/api/account/profile/`) — same `IsAuthenticated`-only, `request.user`-only
+   pattern as password change. Uses
+   `app_account/forms/UserUpdateForm.py` (a `ModelForm` over `UserModel`,
+   `Meta.fields = ("name", "date_birth", "phone")` — **`email` is
+   deliberately not editable here**: changing the login identifier would
+   need its own re-verification flow, analogous to signup's email
+   confirmation, which doesn't exist for an *existing* account today;
+   treat adding that as a separate feature, not a trivial field
+   addition). Because the form's `fields` only lists those three names,
+   any other submitted key (`is_staff`, `is_superuser`, `is_active`,
+   `email`, a client-supplied `id`, ...) is simply ignored by Django's
+   `ModelForm` machinery — no extra filtering code was needed, only a
+   test proving it. Skips the actual `.save()` call (and so leaves
+   `updated_at` untouched) when `form.has_changed()` is `False`. Returns
+   `{"user": serialize_user(user)}` on success, same shape as
+   login/signup, so the frontend can feed the response straight into
+   `AuthContext`'s `setUser()` and keep the navbar/profile home in sync
+   without a second request or a reload.
 
 ### Rate limiting (confirmed, `PROJECT/settings/rest_framework.py`)
 
 Per-scope `ScopedRateThrottle` rates: `signup` 10/hour, `login` 10/minute,
 `email_verification` 5/hour (resend action), `password_reset` 5/hour
-(create action; `validate`/`confirm` use `token_check` 60/hour), `contact`
-5/hour.
+(create action; `validate`/`confirm` use `token_check` 60/hour),
+`password_change` 10/hour, `contact` 5/hour. **`profile` (the profile-edit
+endpoint) is deliberately not throttled** — unlike the other account
+mutation endpoints, it has no credential-guessing or abuse surface
+(no secret being verified), consistent with how an ordinary authenticated
+CRUD endpoint in this project is not throttled by default.
 
 ## Addresses (`account.UserAddressModel`, app_address, Django label `address`)
 
 - `app_address/models/{CountryModel,StateModel,CityModel}.py` form a strict
   hierarchy (`Country ← State ← City`), each normalizing its `name` on
-  `save()`. No public API — admin-only (`app_address/admin/`).
+  `save()`. These three have no standalone API of their own (still
+  admin-only, `app_address/admin/`) but each has a small read-only
+  nested serializer under `app_address/api/serializers/` (`CitySimpleSerializer`,
+  `StateSimpleSerializer`, `CountrySimpleSerializer` — `id`/`name` plus
+  `code`/`iso_code` respectively), consumed by `UserAddressSerializer`
+  (below) to show human-readable city/state/country names instead of
+  raw FK ids.
 - `UserAddressModel` extends `app_address.models.BaseAddressModel`, adds `user` (FK,
-  `CASCADE`) and `primary` (bool). **At most one primary address per
-  user** is enforced both at the model level and the database level
-  (belt and suspenders, mirroring `ProductImageModel`'s pattern):
-  `UserAddressModel.save()` locks the parent user row and demotes any
-  other primary address for that user before saving, and
-  `UniqueConstraint(fields=["user"], condition=Q(primary=True), name="unique_primary_address_per_user")`
-  guards the invariant at the DB level regardless of caller.
-  `validate_constraints`/`_get_unique_checks` are overridden so admin
-  inline formsets tolerate a transient multi-primary submission (the
-  `save()` reorganization resolves it row by row). This does **not**
-  guarantee at least one primary exists — a user with zero addresses, or
-  with addresses but none marked primary, is a valid state (same
-  tolerance as `ProductImageModel`'s `is_primary`).
+  `CASCADE`) and `primary` (bool). **The full invariant — zero addresses
+  ⇒ zero primary; one or more addresses ⇒ exactly one primary — is
+  enforced entirely at the model/signal level, not in the API layer**,
+  so it holds for every caller (admin today, the read/set-primary API,
+  any future caller):
+  - **At most one primary** (the half that existed before this task):
+    `UserAddressModel.save()` locks the parent user row and demotes any
+    other primary address for that user before saving, backed by
+    `UniqueConstraint(fields=["user"], condition=Q(primary=True), name="unique_primary_address_per_user")`
+    at the DB level regardless of caller.
+  - **A user's first address is always primary**, even if the caller
+    explicitly submits `primary=False` — `save()` forces it when
+    `self.pk is None` (a genuine insert) and the user has no other
+    address yet. This is what keeps "has addresses ⇒ exactly one
+    primary" self-enforcing for a future creation workflow without that
+    workflow having to know or care about the rule itself.
+  - **Deleting the primary address promotes another one** (the oldest
+    remaining, by `created_at`) if any addresses are left — a
+    `post_delete` signal, `app_account/signals/promote_primary_address_after_delete.py`,
+    wired up in `AccountConfig.ready()` exactly like
+    `app_product.signals.product_image`'s analogous image-primary-promotion
+    signal. Covers both `instance.delete()` and `QuerySet.delete()` (checked
+    via the signal's `origin` argument, same technique as the product
+    precedent) and no-ops safely if the user itself was deleted too
+    (CASCADE).
+  - `validate_constraints`/`_get_unique_checks` are overridden so admin
+    inline formsets tolerate a transient multi-primary submission (the
+    `save()` reorganization resolves it row by row).
+  - This task implemented the **listing and primary-selection** surface
+    only — there is still no create/update/delete endpoint or UI for
+    addresses (see below); the model/signal hardening above exists so
+    that whenever creation/deletion *are* eventually built, the invariant
+    doesn't need to be re-implemented or re-verified there.
+- **Read/primary-selection API** (`UserAddressViewSet`, mounted at
+  `/api/account/addresses/` — see `api.md` for the exact endpoints):
+  `get_queryset()` is always `UserAddressModel.objects.filter(user=request.user)`
+  — no address id or user id from the client can ever surface another
+  user's addresses; `set_primary` uses `self.get_object()` against that
+  same scoped queryset, so targeting another user's address id 404s
+  (indistinguishable from a nonexistent id — no enumeration leak) rather
+  than succeeding or revealing ownership. `pagination_class = None`
+  (a plain JSON array) — a handful of addresses per user doesn't need
+  the project's default page-based pagination, and `set-primary` returns
+  the user's full, freshly-queried address list (not just the one
+  address) so the frontend can replace its entire local state with one
+  authoritative response instead of reimplementing the demote-the-others
+  logic itself. List ordering is `-primary, created_at` (primary first)
+  — deliberately overriding the model's own `Meta.ordering`, which sorts
+  primary *last* (`False < True`).
 - Admin-manageable: `UserAddressAdmin` (standalone, `get_form()` picks
   `UserAddressCreateForm`/`UserAddressUpdateForm` for add vs change) and
-  `UserAddressInlineAdmin` (attached to `UserAdmin.inlines`). No public
-  API exists yet — see `api.md`.
+  `UserAddressInlineAdmin` (attached to `UserAdmin.inlines`) — still the
+  only way to create or delete an address; no frontend or API path does
+  either yet.
 
 ## Product catalog (app_product, Django label `product`)
 
@@ -93,6 +194,49 @@ Per-scope `ScopedRateThrottle` rates: `signup` 10/hour, `login` 10/minute,
   (`app_product/signals/product_image.py`) re-runs the same renumbering after
   deletion and promotes `order=0` to primary if the deleted image was
   primary and none remains.
+
+## Wishlist (`account.UserWishlistModel`/`UserWishlistItemModel`, app_account)
+
+Backend-only as of 2026-10-15 — no API endpoint, no frontend wiring; the
+`UserMenu.tsx` wishlist link is still the same inert placeholder described
+below. Admin (`UserWishlistAdmin`/`UserWishlistItemAdmin`, with an inline
+for items) is the only way to operate on it today.
+
+- **One wishlist per user**: `UserWishlistModel.user` is a plain
+  `OneToOneField(CASCADE)` — the DB unique index on `user_id` is the whole
+  invariant, no custom `save()` logic needed (unlike addresses, there's no
+  "exactly one flagged row among several" problem here).
+- **Auto-created on signup**: `app_account/signals/
+  create_wishlist_for_new_user.py`, a `post_save` receiver on `UserModel`
+  guarded by `created=True`, calls `UserWishlistModel.objects.get_or_create(
+  user=instance)`. Chosen over a service function specifically because it
+  must fire for *every* user-creation path (signup, admin, factories,
+  future management commands) without each one remembering to call it — a
+  signal registered once in `AccountConfig.ready()` (same `import_module`
+  pattern as `promote_primary_address_after_delete`) covers all of them
+  uniformly. `get_or_create` keeps it idempotent against a double-fire.
+- **Items**: unlimited per list, but **no duplicate product in the same
+  list** — `UniqueConstraint(wishlist, product)`, a real user error
+  surfaced as a clear `ModelForm` validation error (not auto-corrected).
+  The same product can appear in different users' lists.
+- **`position`** (`PositiveIntegerField`, default `0`, 0-based): deliberately
+  *not* the task's literal "1 = first" suggestion — `ProductImageModel.order`
+  already established an equivalent, 0-based, gap-free pattern in this
+  codebase, and reusing that pattern (not inventing a second convention)
+  was judged more valuable than matching the literal suggestion. New items
+  always append to the end (there is no form field for `position` yet —
+  admin shows it read-only — so there is currently no sanctioned way to
+  request a specific position on create). Repositioning an existing item
+  (`item.position = N; item.save()`) re-flows all siblings gap-free via
+  `organize_wishlist_items()`, a per-app copy of
+  `organize_product_images()`'s anchor-insert algorithm (deliberately not
+  shared across apps — see `conventions.md`). `UniqueConstraint(wishlist,
+  position)` is `Deferrable.DEFERRED` so a multi-row reorder inside one
+  transaction doesn't trip it mid-flight. `save()` locks the parent
+  wishlist row (`select_for_update`) first, so concurrent inserts can't
+  both compute the same "next" position. A `post_delete` signal
+  (`reorganize_wishlist_items_after_delete.py`) closes the gap after a
+  deletion — mirroring `app_product.signals.product_image` exactly.
 
 ## Shopping cart / checkout — confirmed absent
 

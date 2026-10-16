@@ -2,65 +2,56 @@
 
 ## Objective
 
-Migrate the legacy Django-template authenticated-user experience
-(`frontend.old/accounts/profile_base.html`/`profile_detail.html`,
-reference only) to the current React frontend: a reusable authenticated
-layout, a profile home page showing real user data, route protection,
-and nav wiring — requested 2026-10-13.
+Implement and review the wishlist system (backend only, `app_account`):
+one wishlist per user, items with no duplicate product per list, a
+gap-free `position` field with safe insertion/reorganization, admin
+support, tests. Explicitly out of scope: any frontend work, any API
+endpoint, touching `frontend.old/`.
 
-## Status: Complete, including frontend tests and a follow-up live bug fix
+## Status: Complete
 
-1. Extended `/api/account/session/` (via `UserSerializer`) to expose
-   `date_birth`, `phone`, `created_at` — the only backend change,
-   reusing the existing single current-user endpoint instead of creating
-   a new one.
-2. Built `AccountLayout.tsx` (sidebar + content + message/alert area),
-   `ProfilePage.tsx` (consumes `useAuth().user` only), `ProtectedRoute.tsx`
-   (route guard), and `useMessages.ts` (reusable dismissible-message
-   queue), plus a small `Alert.tsx` extension and 4 new icons.
-3. Registered `/profile` in `App.tsx` behind `ProtectedRoute`; wired
-   `UserMenu.tsx`'s "Perfil" item to it.
-4. Added full translations (5 locales) for all new user-facing strings.
-5. Updated the one backend test whose exact session-payload assertion
-   needed the 3 new fields (plus a timezone-conversion fix to match
-   DRF's serialized offset).
+See `changelog.md` (2026-10-15 entry) for the full account of files
+changed, the migration-graph incident and its fix, and the verification
+results. Highlights for picking up related work:
 
-## Validation performed
+- **Blocking migration incident, fixed first**: `app_address/migrations/
+  0001_initial.py` and `app_product/migrations/0001_initial.py` were
+  missing from disk (migrations aren't committed to git — see
+  `../memory/known_issues.md`), which left `app_account/migrations/
+  0002_initial.py` depending on nonexistent nodes (`NodeNotFoundError`)
+  and, via `entrypoint.sh`'s unconditional `makemigrations` under `set -e`,
+  put `ecommerce_django` in a live crash-loop (233+ restarts). Fixed by
+  regenerating real migrations for both apps (Django's own autodetector,
+  not hand-written) and correcting `account.0002_initial`'s dependencies
+  to point at the migrations that actually create the referenced tables
+  — no `--fake`, no manual `django_migrations` edits, no data loss (the
+  affected tables were confirmed empty throughout). See `database.md`'s
+  "Migrations — confirmed risk" section for the exact mechanics.
+- **Models**: `UserWishlistModel` (`OneToOneField`, no custom `save()`
+  needed) and `UserWishlistItemModel` (`position` field +
+  `organize_wishlist_items()`, a per-app copy of `ProductImageModel`'s
+  `order`/`organize_product_images()` pattern — deliberately not shared
+  across apps). See `database.md`/`domain.md`.
+- **Auto-creation**: `app_account/signals/create_wishlist_for_new_user.py`,
+  a `post_save` signal on `UserModel` — chosen over a service function so
+  every creation path (signup, admin, factories, future commands) is
+  covered uniformly without each one remembering to call it.
+- **Admin**: `UserWishlistAdmin` (with an items inline) and
+  `UserWishlistItemAdmin`, both wired with `select_related`/
+  `prefetch_related` and `autocomplete_fields` for `product`. Fixed a
+  pre-existing bug in the drafted admin files: `search_fields` referenced
+  `user__username`, a field `UserModel` doesn't have (it uses `email` as
+  `USERNAME_FIELD`) — corrected to `user__email`/`user__name`.
+- **Tests**: `app_account/tests/models/test_user_wishlist_rules.py`,
+  `test_user_wishlist_item_rules.py`, `app_account/tests/test_migrations.py`
+  (regression test for the `NodeNotFoundError` incident) — 30 new tests,
+  181 passed overall (no regressions). `ruff`/`mypy`/`basedpyright` all
+  clean. See `testing.md`.
 
-Frontend: `tsc -b`, `eslint .`, `npm run build` — all clean.
-Backend: `manage.py check`, `makemigrations --check --dry-run` (no
-changes needed), full `pytest` (104 passed), `ruff check`/`ruff format
---check`, `mypy`, `basedpyright` — all clean.
+## Not touched (out of scope, by task instruction)
 
-## Frontend tests (installed after an initial "skip for now")
-
-Asked the user whether to install a frontend test framework (project had
-none) to cover the new `AccountLayout`/`ProfilePage`. The user initially
-chose to skip it, then asked for it to be added after all (same
-conversation, while reporting the live bug below). Installed Vitest +
-React Testing Library and wrote 14 tests covering `AccountLayout`,
-`ProfilePage`, and `ProtectedRoute` — see `changelog.md`/`testing.md`.
-Frontend test coverage elsewhere in the app is still zero.
-
-## Live bug found and fixed: blank `/profile` page
-
-User reported `https://177.222.210.50/profile` showing the navbar
-briefly then going blank. Root cause: `ecommerce_django` runs Gunicorn
-with no autoreload, so it kept serving the pre-extension `UserSerializer`
-(missing the 3 new fields) even though the source file was already
-correct — the long-running workers never picked up the earlier edit.
-`ProfilePage.tsx` assumed those fields always exist and threw rendering
-them, crashing the whole React tree (no error boundary). Fixed with
-`docker compose restart backend`; reproduced and verified the fix with a
-real Playwright/Edge session against the live site (throwaway test user,
-created and deleted via Django shell). See `known_issues.md` for the
-standing process gap this revealed (no backend autoreload).
-
-## Not touched (out of scope for this task)
-
-- `frontend.old/` — read as reference only, never modified.
-- No new account pages were built for edit profile/change
-  password/orders/addresses/wishlist — those sidebar/dropdown items stay
-  inert, matching the project's existing treatment of the same items
-  elsewhere, since none of those pages exist yet.
-- No cart/checkout/order work — unrelated to this task.
+- No frontend changes of any kind; `frontend.old/` untouched.
+- No API endpoint for the wishlist (admin is the only interface today —
+  see `project_state.md`'s "Immediate priorities").
+- The underlying "migrations not committed to git" policy itself — only
+  the specific broken state it caused this time was repaired.

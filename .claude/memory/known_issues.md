@@ -19,7 +19,18 @@ needing further runtime verification.
    them now, or keep ignoring deliberately and fix the contradictory
    comments). Re-confirmed 2026-10-13 during the `app_` rename migration —
    unaffected by that rename either way (the `.gitignore` rule still
-   applies regardless of package name).
+   applies regardless of package name). **Confirmed to cause real
+   breakage 2026-10-15** (wishlist task): `app_address/migrations/
+   0001_initial.py` and `app_product/migrations/0001_initial.py` were
+   both missing from disk while `app_account/migrations/0002_initial.py`
+   depended on both — `NodeNotFoundError` on every command, and
+   `entrypoint.sh`'s unconditional `makemigrations` (under `set -e`) turned
+   it into a live crash-loop (233+ container restarts). Fixed for this
+   specific incident (see `../context/database.md`'s "Migrations —
+   confirmed risk" section for the exact repair) without touching the
+   underlying policy — the next time any app's local migration files are
+   lost, the same failure mode will recur until migrations are actually
+   committed.
 2. **Weak hard-coded fallback superuser.**
    `app_account/signals/create_default_superuser.py` creates
    `admin@example.com` / `admin123` on `post_migrate` whenever no
@@ -59,18 +70,20 @@ needing further runtime verification.
 5. **`docs/render.md` disagrees with the actual `render.yaml`.** The doc
    claims `render.yaml` sets `dockerfilePath`/`dockerContext` to
    `./backend`; the real file sets `./Dockerfile` / `.` (root).
-6. **`app_account/forms/UserUpdateForm.py`'s `Meta.model` is a type
-   annotation, not an assignment** (`model: UserModel` instead of
-   `model = UserModel`). Currently latent/undetected because the form is
-   never instantiated anywhere in the codebase. Will raise
-   Django's "class Meta ... must have a model attribute" the moment
-   someone tries to use it.
-7. **Several other forms/helpers are dead code**: `PasswordChangeForm`,
-   `UserUpdateForm` (zero usages beyond their own `__init__.py` export),
+6. ~~**`app_account/forms/UserUpdateForm.py`'s `Meta.model` is a type
+   annotation, not an assignment.**~~ **Resolved 2026-10-14.** Fixed to
+   `model = UserModel` when the form was wired up to
+   `ProfileUpdateViewSet` (`/api/account/profile/`) — see `changelog.md`.
+7. **Several other forms/helpers are dead code**:
    `app_core/forms/ContactForm.py` (unused — `ContactSerializer` duplicates its
    validation independently, risk of the two drifting apart),
    `app_product/context_processors.py:context_processors_product_categories`
    (never registered in `TEMPLATES["OPTIONS"]["context_processors"]`).
+   `PasswordChangeForm` and `UserUpdateForm` were dead code too, until
+   2026-10-13/14 respectively, when `PasswordChangeViewSet`
+   (`/api/account/password-change/`) and `ProfileUpdateViewSet`
+   (`/api/account/profile/`) started using them — no longer applies to
+   either.
 8. **`django-guardian` is installed and backend-registered but has zero
    actual usage** (no `assign_perm`, no object-level permission checks
    anywhere). Does not currently provide any real protection.
@@ -91,18 +104,24 @@ needing further runtime verification.
     `PROJECT/settings/debug_toolbar.py`.
 12. **No shopping cart/checkout/order implementation exists anywhere** —
     backend and frontend both confirmed via repo-wide search. Frontend
-    cart/wishlist/orders/profile UI elements are inert placeholders.
+    cart/wishlist/orders UI elements are still inert placeholders
+    (profile/password-change/profile-edit/address-list are no longer in
+    this category — see `../context/project_state.md`).
 13. **No CI/automation exists** (no `.github/workflows/`, no `Makefile`,
     no pre-commit hooks). All checks are run by hand.
 14. ~~**Zero frontend test infrastructure.**~~ **Partially resolved
     2026-10-13.** Vitest + React Testing Library installed (see
-    `../context/testing.md`/`dependencies.md`), with 14 passing tests
-    covering `AccountLayout`/`ProfilePage`/`ProtectedRoute`. The project
-    had initially deferred this when asked during the same task, then
-    asked for it to be added after all. Everything else in the frontend
-    (every other page/component) still has zero test coverage — the
-    infrastructure exists now, but adoption is just starting.
-15. **`app_address/` and `app_core/` apps have zero backend tests.**
+    `../context/testing.md`/`dependencies.md`), with 59 passing tests
+    covering `AccountLayout`/`ProfilePage`/`ProfileEditPage`/
+    `PasswordChangePage`/`AddressListPage`/`ProtectedRoute`/`useMessages`.
+    The project had initially deferred this when asked, then asked for it
+    to be added after all. Everything else in the frontend (every other
+    page/component) still has zero test coverage — the infrastructure
+    exists now, but adoption is just starting.
+15. **`app_core/` has zero backend tests; `app_address/` has factories
+    now (2026-10-14, written for `app_account`'s new address tests) but
+    still no tests of its own** — no model/form/admin/serializer test
+    directly in `app_address/tests/`.
 16. **`.claude/commands/`, `.claude/context/`, `.claude/memory/` were all
     completely empty (0 bytes)** before this task — fixed as part of this
     documentation pass (see `changelog.md`).
@@ -161,9 +180,6 @@ needing further runtime verification.
 
 ## Needs further verification (not yet confirmed at runtime)
 
-- Whether `manage.py migrate` actually succeeds from a genuinely fresh
-  clone today, given the missing migrations (strong circumstantial
-  evidence it would not, but not executed as part of this analysis).
 - Exact precedence when a user account has **both** `is_active=False` and
   `is_email_verified=False` simultaneously at login — not traced in
   `LoginForm.clean()`/`__get_login_error()` during this pass.

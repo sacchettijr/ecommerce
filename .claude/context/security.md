@@ -16,6 +16,47 @@
 - Account enumeration is deliberately prevented on resend-verification and
   password-reset (identical response regardless of whether the account
   exists) — preserve this if you touch those flows.
+- **A new password must differ from the current one**, enforced
+  server-side (`PasswordChangeForm.clean()`, see `domain.md`) via
+  `user.check_password()` against the stored hash — never a raw string
+  comparison — so this can't be bypassed by a client that skips the
+  frontend's own warning. The frontend cannot weaken this: it only
+  decides how the resulting `password_unchanged` code is displayed, not
+  whether the change is allowed.
+- **No endpoint that returns or mutates personal account data accepts a
+  client-supplied user identifier.** `/api/account/session/`,
+  `/api/account/password-change/`, `/api/account/profile/`, and
+  `/api/account/addresses/` (list + `set-primary`) all resolve the
+  target user exclusively from `request.user` (the authenticated
+  session) — confirmed by reading every viewset and by tests that
+  deliberately try to smuggle another user's id/email into the request
+  (or, for addresses, another user's address id) and assert it has no
+  effect. If a future endpoint needs to look up a user, keep following
+  this pattern (resolve from the session, never from a request
+  parameter) rather than trusting an id and checking it against
+  `request.user` afterward.
+- **`UserAddressViewSet.set_primary` 404s, not 403, on another user's
+  address id.** `get_object()` is called against a queryset already
+  filtered to `request.user`'s own addresses, so an id belonging to
+  someone else looks identical to an id that doesn't exist at all — an
+  attacker can't use the response to tell "exists but isn't yours" apart
+  from "doesn't exist," consistent with this project's anti-enumeration
+  posture elsewhere (resend-verification, password-reset).
+- **Protected/administrative fields can't be set through the profile-edit
+  endpoint**, not because of explicit filtering code but because
+  `UserUpdateForm.Meta.fields` only lists `name`/`date_birth`/`phone` —
+  Django's `ModelForm` simply never reads any other submitted key
+  (`is_staff`, `is_superuser`, `is_active`, `email`, ...). Confirmed by a
+  test that submits all of those alongside a valid update and asserts
+  none of them changed. If a field is ever added to that form, re-check
+  this guarantee still holds for it.
+- **`email` is intentionally not editable via `/api/account/profile/`.**
+  It's the `USERNAME_FIELD` and its verification status
+  (`is_email_verified`) is tied to the specific address a token was sent
+  to; allowing a silent email change here would let a user "verify" an
+  address without ever proving they own it. Adding email-change support
+  would need its own re-verification flow (like signup's), not a one-line
+  addition to this form.
 
 ## Secrets
 

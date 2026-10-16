@@ -12,15 +12,21 @@ live schema/docs (not just installed — confirmed: `SpectacularAPIView`/
 | `/api/account/login/`, `/api/account/logout/` | session login/logout |
 | `/api/account/signup/` | registration |
 | `/api/account/email-verification/confirm/`, `/api/account/email-verification/resend/` | email verification flow |
-| `/api/account/password-reset/`, `/password-reset/validate/`, `/password-reset/confirm/` | password reset flow |
+| `/api/account/password-reset/`, `/password-reset/validate/`, `/password-reset/confirm/` | password reset flow (unauthenticated, via emailed link) |
+| `/api/account/password-change/` | self-service password change for the authenticated session's own user (`IsAuthenticated`, no user id accepted — see `domain.md`); rejects a new password identical to the current one with `{"code": "password_unchanged"}` |
+| `/api/account/profile/` | self-service profile update (`name`/`date_birth`/`phone` only — `email` is not editable) for the authenticated session's own user (`IsAuthenticated`, no user id accepted — see `domain.md`); returns `{"user": {...}}`, same shape as login/signup |
+| `/api/account/addresses/` | list the authenticated session's own addresses (`IsAuthenticated`, no user/address id from the client can surface another user's data — see `domain.md`); plain JSON array, not paginated; primary first |
+| `/api/account/addresses/{id}/set-primary/` | POST, makes that address primary and unsets the user's other addresses atomically; 404 (not 403) if `{id}` doesn't belong to the requester, so it can't be used to probe whether an id exists; returns the user's full, fresh address list |
 | `/api/product/products/`, `/api/product/products/{slug}/` | public product list/detail (`active=True` only) |
 | `/api/product/categories/` | public category list (`active=True` only) |
 | `/api/core/contact/` | contact form submission (throttled, dispatches an email via Celery) |
 | `/api/core/health/` | health check (used by the Docker/Render healthcheck) |
 
-`app_address` has **no API** — no `app_address/urls.py` exists and it is
-not included in `PROJECT/urls.py`. Country/State/City are admin-managed
-only.
+`app_address` still has **no routes of its own** — no `app_address/urls.py`
+exists and it is not included in `PROJECT/urls.py`; Country/State/City
+remain admin-managed only, reachable from the API only as small
+read-only nested objects inside `/api/account/addresses/`'s response
+(see `domain.md`).
 
 ## Conventions actually in use
 
@@ -66,8 +72,11 @@ only.
   duplicates its validation independently. If you touch contact-form
   validation, check both files or consolidate them (see `../memory/known_issues.md`).
 - No cart/checkout/order endpoints exist (see `domain.md`).
-- No address API exists yet — `UserAddressModel` is admin-manageable
-  (standalone + inline under `UserAdmin`, see `domain.md`) but has no
-  DRF serializer/viewset. If asked to build one, the primary-address
-  exclusivity rule already lives in `UserAddressModel.save()` — reuse it
-  as-is rather than duplicating the check in a serializer.
+- The address API only supports **reading the list and switching which
+  one is primary** — there is still no create/update/delete endpoint for
+  addresses (admin is still the only way to add or remove one). If asked
+  to build those, the primary-address invariant (at-most-one, first-is-primary,
+  promote-on-delete) already lives entirely in `UserAddressModel.save()`
+  and `app_account/signals/promote_primary_address_after_delete.py` —
+  reuse them as-is rather than duplicating the rules in a new
+  serializer/viewset.

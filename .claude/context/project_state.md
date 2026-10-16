@@ -16,9 +16,13 @@ young, actively-evolving prototype, not a mature codebase).
 - Address reference data (Country/State/City) — admin-manageable,
   hierarchical, `PROTECT`-on-delete.
 - `UserAddressModel`: admin-manageable (standalone `UserAddressAdmin`
-  plus an inline under `UserAdmin`), with "at most one primary address
-  per user" enforced in `save()` (DB constraint as backstop) —
-  mirrors `ProductImageModel`'s pattern. No public API yet.
+  plus an inline under `UserAdmin`), with the full primary-address
+  invariant (at most one; a user's first address is always primary;
+  deleting the primary promotes another) enforced at the model/signal
+  level — mirrors `ProductImageModel`'s pattern, see `domain.md`. Has a
+  **read-only** API now: `/api/account/addresses/` (list, own addresses
+  only) and its `set-primary` action — still no create/update/delete
+  endpoint.
 - Local Docker Compose stack: Postgres, Redis, RabbitMQ, Celery worker,
   Django, Vite dev server, Nginx (reverse proxy), CloudBeaver, Certbot
   (profile-gated). Nginx currently serves HTTP (redirects to HTTPS) and
@@ -32,10 +36,35 @@ young, actively-evolving prototype, not a mature codebase).
   `ProtectedRoute.tsx`) renders the real logged-in user's `name`/`email`/
   `date_birth`/`phone`/account-creation date, and `is_staff` only when
   `true` — via the extended `/api/account/session/` payload, inside the
-  new reusable `AccountLayout` (sidebar + message/alert area). Other
-  sidebar/dropdown destinations (edit profile, change password, orders,
-  addresses, wishlist) remain inert placeholders — no pages exist for
-  them yet.
+  reusable `AccountLayout` (sidebar + message/alert area).
+- `/profile/edit` (also route-guarded): self-service profile editing
+  (`name`/`date_birth`/`phone`; `email` deliberately not editable — see
+  `security.md`), backed by `/api/account/profile/`. On success,
+  refreshes `AuthContext` via `setUser()` so the navbar/profile home
+  reflect the change immediately, with no reload and no second current-user
+  fetch.
+- `/profile/password` (also route-guarded): self-service password change,
+  backed by `/api/account/password-change/` (see `api.md`/`domain.md`).
+  Rejects a new password identical to the current one (`password_unchanged`
+  code) with a `warning`-styled notification, not a success.
+- `/profile/addresses` (also route-guarded): lists the authenticated
+  user's own addresses, each field shown only when non-blank, with a
+  radio group to switch the primary address (immediate request on
+  selection, no Save button — see `domain.md`/`architecture.md` for how
+  rapid/overlapping selections and failures are reconciled against the
+  backend's authoritative state). Add/Edit/Delete are rendered but
+  intentionally inert (`aria-disabled`, no handlers, accessible tooltips)
+  — no create/edit/delete workflow exists yet. Remaining sidebar/dropdown
+  destinations (orders, wishlist) stay inert placeholders — no pages
+  exist for them yet.
+- `UserWishlistModel`/`UserWishlistItemModel` (2026-10-15): backend only —
+  one wishlist per user (auto-created on signup via signal), unlimited
+  items with no duplicate product per list (DB constraint + clear form
+  error), gap-free `position` with insertion/reorganization/deletion all
+  handled consistently, mirroring `ProductImageModel`'s established
+  pattern. Admin-manageable (`UserWishlistAdmin` with an items inline,
+  `UserWishlistItemAdmin`). No API endpoint and no frontend wiring yet —
+  see `domain.md`.
 
 ## Partially implemented
 
@@ -53,16 +82,21 @@ young, actively-evolving prototype, not a mature codebase).
 
 - **Shopping cart / checkout / orders** — no model, API, or functional UI
   exists anywhere. UI copy/icons/dead buttons exist on the frontend only.
-- **Address API** — no endpoint exists; addresses are currently only
-  reachable by direct ORM/shell access (not even via Django admin, since
-  there's no `UserAddressAdmin`).
+- **Address create/edit/delete** — `/api/account/addresses/` only
+  supports listing and switching the primary; there is still no
+  endpoint or frontend workflow to create, edit, or delete an address
+  (admin remains the only way).
 - **Automated CI** — no GitHub Actions, no pre-commit hooks, no Makefile.
 - **Frontend tests** — Vitest + React Testing Library installed
   2026-10-13 (see `testing.md`), but only the authenticated account area
-  (`AccountLayout`/`ProfilePage`/`ProtectedRoute`, 14 tests) is covered;
-  everything else in the frontend still has zero tests.
-- **Route guarding** on the frontend — now exists (`ProtectedRoute.tsx`,
-  used by `/profile`), but only one real account page exists behind it.
+  (`AccountLayout`/`ProfilePage`/`ProfileEditPage`/`ProtectedRoute`/
+  `PasswordChangePage`/`AddressListPage`/`useMessages`) plus one
+  standalone utility (`sanitizePhoneInput`), 59 tests total, is covered;
+  everything else in the frontend (including `SignupPage.tsx`/`ContactPage.tsx`)
+  still has zero tests.
+- **Route guarding** on the frontend — now exists (`ProtectedRoute.tsx`),
+  used by `/profile`, `/profile/edit`, `/profile/password`, and
+  `/profile/addresses`.
 
 ## Immediate priorities (if asked "what's next," ground the answer here)
 
@@ -72,9 +106,12 @@ young, actively-evolving prototype, not a mature codebase).
 2. Reconcile the two divergent superuser-bootstrap mechanisms (weak
    fallback vs. strict) before this is ever deployed somewhere the
    `post_migrate` signal's fallback could fire unnoticed.
-3. Decide whether `app_address`/`UserAddressModel` get a real API + admin
-   wiring, or whether the existing dead forms should be removed.
+3. Decide whether `UserAddressModel` gets create/edit/delete API +
+   frontend support (list + set-primary already exist, see `domain.md`),
+   or whether admin remains the only way to add/remove an address.
 4. Fix the stale `backend/`-prefixed paths in `README.md` and
    `docs/render.md` (confirmed wrong — see `../memory/known_issues.md`).
+5. Decide whether the wishlist gets an API + frontend (model/admin layer
+   is done, see `domain.md`) — same shape of decision as item 3 above.
 5. Nothing beyond this list is a "confirmed plan" — see `roadmap.md` for
    the distinction between documented intent and open suggestions.
