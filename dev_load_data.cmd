@@ -2,15 +2,15 @@
 setlocal
 
 echo Carregando dados iniciais de data/ (country)...
-docker exec ecommerce_django python manage.py loaddata data/init_data_CountryModel.json
+docker exec ecommerce_django python manage.py loaddata data/init_data_address_CountryModel.json
 echo _________________________________________________________________________________
 
 echo Carregando dados iniciais de data/ (state)...
-docker exec ecommerce_django python manage.py loaddata data/init_data_StateModel.json
+docker exec ecommerce_django python manage.py loaddata data/init_data_address_StateModel.json
 echo _________________________________________________________________________________
 
 echo Carregando dados iniciais de data/ (city)...
-docker exec ecommerce_django python manage.py loaddata data/init_data_CityModel.json
+docker exec ecommerce_django python manage.py loaddata data/init_data_address_CityModel.json
 echo _________________________________________________________________________________
 
 echo TEST ONLY

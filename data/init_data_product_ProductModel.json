@@ -151,5 +151,22 @@
       "price": "319.98",
       "thumbnail": "products/thumbnails/9/83f16c9b1360.jpg"
     }
+  },
+  {
+    "model": "product.productmodel",
+    "pk": 10,
+    "fields": {
+      "created_at": "2026-10-16T06:48:47.094Z",
+      "updated_at": "2026-10-16T06:49:01.849Z",
+      "created_by": 1,
+      "updated_by": 1,
+      "active": true,
+      "name": "KODAK PIXPRO FZ45 16MP Compact Digital Camera, 4X Optical Zoom, AA, Black",
+      "slug": "kodak-pixpro-fz45-16mp-compact-digital-camera-4x-optical-zoom-aa-black",
+      "category": 1,
+      "description": "* **6MP Sensor:** Captures detailed photos with a CMOS sensor for everyday shooting\n* **Optical Zoom:** 4x optical zoom with a 27mm wide angle lens for flexible framing indoors or outdoors\n* **Full HD Video:** Records 1080p video for travel clips, family moments, or simple vlogging\n* **Memory Support:** Works with Class 10 SD, SDHC, or SDXC cards up to 512GB\n* **LCD Screen and Battery:** 2.7in LCD screen with 2 AA alkaline batteries for convenient on-the-go use",
+      "price": "99.99",
+      "thumbnail": "products/thumbnails/10/79c1a1de5ea7.jpg"
+    }
   }
 ]
