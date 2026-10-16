@@ -1,0 +1,155 @@
+[
+  {
+    "model": "product.productmodel",
+    "pk": 1,
+    "fields": {
+      "created_at": "2026-10-16T01:14:30.306Z",
+      "updated_at": "2026-10-16T01:14:45.472Z",
+      "created_by": 1,
+      "updated_by": 1,
+      "active": true,
+      "name": "Daytee Sweater Weather Sweatshirt, Pumpkin Whipped Drink Pinecone Leaves Graphic Crewneck Cozy Fall Top for Women",
+      "slug": "daytee-sweater-weather-sweatshirt-pumpkin-whipped-drink-pinecone-leaves-graphic-crewneck-cozy-fall-top-for-women",
+      "category": 12,
+      "description": "* Sweater Weather Design – Features large “Sweater Weather” lettering with a cozy whipped drink mug, pumpkin, pinecone, autumn leaves, soft polka dot stripe background, and warm rustic colors for a sweatshirt made for chilly fall days and seasonal comfort.\n* Cozy Autumn Artwork – The design blends brown textured lettering, sage green stripes, cream dots, orange pumpkin tones, leafy accents, cinnamon stick details, and a warm mug topped with whipped cream for a farmhouse-inspired fall look with relaxed seasonal charm.",
+      "price": "29.95",
+      "thumbnail": "products/thumbnails/1/6c58b7dc6fc2.jpg"
+    }
+  },
+  {
+    "model": "product.productmodel",
+    "pk": 2,
+    "fields": {
+      "created_at": "2026-10-16T01:17:40.578Z",
+      "updated_at": "2026-10-16T01:18:00.978Z",
+      "created_by": 1,
+      "updated_by": 1,
+      "active": true,
+      "name": "Surprise Pregnancy Announcement Infant Bodysuit - And Then There Were Four",
+      "slug": "surprise-pregnancy-announcement-infant-bodysuit-and-then-there-were-four",
+      "category": 12,
+      "description": "* Packaging: In accordance with Amazon's requirement, this infant bodysuit ships in clear packaging. Please choose \"GIFT WRAP\" during checkout if the arrival of your item requires it to be a special surprise.\n* Product Details: 0-3 month short sleeve infant bodysuit - Fits infants up to 9 lbs. Our pregnancy announcement infant bodysuits are high quality, super soft, and professionally screen printed in Idaho, USA.\n* This cute and fun infant bodysuit makes the perfect photo prop to announce your pregnancy to your family and friends! Adorable, functional, and perfect to help you announce that you're pregnant!",
+      "price": "16.95",
+      "thumbnail": "products/thumbnails/2/8fa3d20fc848.jpg"
+    }
+  },
+  {
+    "model": "product.productmodel",
+    "pk": 3,
+    "fields": {
+      "created_at": "2026-10-16T01:25:03.528Z",
+      "updated_at": "2026-10-16T01:25:03.528Z",
+      "created_by": 1,
+      "updated_by": 1,
+      "active": true,
+      "name": "Cinq a Sept Women's Crepe Khloe Blazer",
+      "slug": "cinq-a-sept-womens-crepe-khloe-blazer",
+      "category": 12,
+      "description": "* One Button Drapey Crepe Blazer\n* Notched lapel\n* Welt pockets\n* Stylized sleeves\n* Single vent",
+      "price": "395.00",
+      "thumbnail": "products/thumbnails/3/e310d320019b.jpg"
+    }
+  },
+  {
+    "model": "product.productmodel",
+    "pk": 4,
+    "fields": {
+      "created_at": "2026-10-16T01:27:17.732Z",
+      "updated_at": "2026-10-16T01:27:17.732Z",
+      "created_by": 1,
+      "updated_by": 1,
+      "active": true,
+      "name": "Free People Women's Blair Vegan Suede Sierra Jacket",
+      "slug": "free-people-womens-blair-vegan-suede-sierra-jacket",
+      "category": 12,
+      "description": "* The Free People Blair Vegan Suede Sierra is the kind of jacket that instantly elevates any outfit with its laid-back yet polished appeal. Crafted with a soft vegan suede finish, it delivers the luxe look you love while offering lightweight comfort fo\n* 49% polyester, 41% cotton, 10% nylon.\n* Machine washable.",
+      "price": "151.20",
+      "thumbnail": "products/thumbnails/4/5958533808c3.jpg"
+    }
+  },
+  {
+    "model": "product.productmodel",
+    "pk": 5,
+    "fields": {
+      "created_at": "2026-10-16T01:30:10.882Z",
+      "updated_at": "2026-10-16T01:30:10.882Z",
+      "created_by": 1,
+      "updated_by": 1,
+      "active": true,
+      "name": "BURBERRY BE4407 Cat eye Shape Acetate Sunglasses with Luxury Eyewear Kit",
+      "slug": "burberry-be4407-cat-eye-shape-acetate-sunglasses-with-luxury-eyewear-kit",
+      "category": 12,
+      "description": "* Sleek Modern Design – Elevate your style with these BURBERRY BE4407 Cat Eye-Shaped sunglasses. Crafted from premium acetate in a bold vintage check finish, they feature a timeless design that complements casual and upscale looks alike.\n* Authentic Craftsmanship – Made in Italy with meticulous attention to detail, these sunglasses showcase Burberry’s luxury heritage. The dark grey lenses paired with matching vintage check temples deliver a polished, refined aesthetic.",
+      "price": "198.80",
+      "thumbnail": "products/thumbnails/5/f9a522cbcab2.jpg"
+    }
+  },
+  {
+    "model": "product.productmodel",
+    "pk": 6,
+    "fields": {
+      "created_at": "2026-10-16T01:39:37.305Z",
+      "updated_at": "2026-10-16T01:39:37.305Z",
+      "created_by": 1,
+      "updated_by": 1,
+      "active": true,
+      "name": "Samsung Internal SSD 990 1TB, Read/Write Speeds Up to 7,150/6,450 MB/s",
+      "slug": "samsung-internal-ssd-990-1tb-readwrite-speeds-up-to-71506450-mbs",
+      "category": 2,
+      "description": "* **THE SPEED YOU NEED:&#x20;**&#x53;pend less time waiting and more time creating, gaming, and multitasking with up to 7,150/6,450 MB/s sequential read/write speeds and up to 700K/1,100K IOPS random read/write speeds¹. Load large games quickly, install updates smoothly, transfer high resolution files, and export complex projects with ease. Whether exploring virtual worlds or jumping into your next creative project, enjoy smooth, responsive performance.\n* **POWER CONSCIOUS PERFORMANCE:** Strike the right balance between performance and power consumption with up to 38% improved performance per watt over the 990 PRO². Thanks to optimized power usage, easily handle games, large files, and everyday workloads on laptops and PCs while supporting smooth, responsive workflows.\n* **FULL LIBRARY, FEWER COMPROMISES:&#x20;**&#x54;he days of deleting games or offloading files to free up space are over. With up to 2TB of storage, keep your favorite games installed, store high resolution 4K footage, personal files, and long-term archives, with enough room for growing libraries and less time spent managing storage.",
+      "price": "189.99",
+      "thumbnail": "products/thumbnails/6/bc68da465597.jpg"
+    }
+  },
+  {
+    "model": "product.productmodel",
+    "pk": 7,
+    "fields": {
+      "created_at": "2026-10-16T01:47:05.681Z",
+      "updated_at": "2026-10-16T01:47:23.436Z",
+      "created_by": 1,
+      "updated_by": 1,
+      "active": true,
+      "name": "Logitech G915 X Lightspeed TKL Wireless Gaming Keyboard (Clicky) - Black",
+      "slug": "logitech-g915-x-lightspeed-tkl-wireless-gaming-keyboard-clicky-black",
+      "category": 2,
+      "description": "* **TKL Keyboard for Gaming:** The Logitech G915 X LIGHTSPEED TKL compact gaming keyboard offers the latest innovations in gaming tech; sleek design and next-gen engineering elevate every level of play\n* **Choose Your Connectivity With Tri-Mode:** Connect with best-in-class 2.4 GHz LIGHTSPEED wireless, Bluetooth, or USB-C wired data mode; switch back and forth with the touch of a button\n* **Master the Game Your Way:** Set up to 15 functions per key to turn your wireless keyboard into a personalized command center with KEYCONTROL\n* **Compact Control:** This ultra-thin, low-profile gaming keyboard features KEYCONTROL, media keys, and a volume roller to elevate the tenkeyless design with uncompromised access to control\n* **Speed and Precision:** Achieve speed, precision, and comfort with low-profile GL mechanical switches; increase APM rate (actions per minute) with 1.3mm actuation point and 3.2mm total travel distance",
+      "price": "209.99",
+      "thumbnail": "products/thumbnails/7/c158d996c429.jpg"
+    }
+  },
+  {
+    "model": "product.productmodel",
+    "pk": 8,
+    "fields": {
+      "created_at": "2026-10-16T01:51:02.982Z",
+      "updated_at": "2026-10-16T01:51:02.982Z",
+      "created_by": 1,
+      "updated_by": 1,
+      "active": true,
+      "name": "Samsung 49\" Odyssey (G93SC) Series QD-OLED Curved Gaming Monitor",
+      "slug": "samsung-49-odyssey-g93sc-series-qd-oled-curved-gaming-monitor",
+      "category": 2,
+      "description": "* **HANDPICKED BY AMAZON:** They did the research so you don’t have to\n* **THE ULTIMATE QD-OLED MONITOR EXPERIENCE:&#x20;**&#x45;xperience the difference with Samsung OLED. A brighter screen delivers brilliant colors, deeper shades, and more intense contrast, bringing vibrant vistas to life in new ways\n* **ULTRAWIDE VISTAS:** Immerse yourself in expansive worlds with an ultrawide display that’s two quads wide. Enjoy maximum screen space and razor-sharp detail, while the 1800R curvature wraps around your field of vision for unparalleled depth and engagement\n* **OUTMANUEVER OPPONENTS WITH SUPREME SPEED:** QD-OLED technology delivers near instant reaction time with 0.03ms(GTG) response time; HDMI 2.1 and DisplayPort connections keep you ahead of the competition with the 240Hz refresh rate",
+      "price": "899.99",
+      "thumbnail": "products/thumbnails/8/267dec5cd700.jpg"
+    }
+  },
+  {
+    "model": "product.productmodel",
+    "pk": 9,
+    "fields": {
+      "created_at": "2026-10-16T01:54:23.562Z",
+      "updated_at": "2026-10-16T01:54:23.562Z",
+      "created_by": 1,
+      "updated_by": 1,
+      "active": true,
+      "name": "HP 2026 Everyday Laptop, Intel CPU, 128GB Storage, Copilot AI, Office 365",
+      "slug": "hp-2026-everyday-laptop-intel-cpu-128gb-storage-copilot-ai-office-365",
+      "category": 2,
+      "description": "* **💻 EFFICIENT INTEL N150 QUAD-CORE PROCESSOR:** Intel N150 processor with 4 cores (up to 3.6 GHz with Intel Turbo Boost, 6MB L3 cache) delivers reliable performance for everyday computing, web browsing, streaming, video calls, and productivity tasks. Intel Graphics handles HD video playback seamlessly. Perfect for students, home users, and professionals handling documents, emails, and online learning.\n* **⚡ FAST STORAGE & SMOOTH MULTITASKING:** 4GB LPDDR5-4800 MT/s RAM ensures responsive multitasking for multiple browser tabs and applications. 128GB UFS storage provides quick boot times, instant app launches, and fast file access. Windows 11 Home with Microsoft Copilot AI integration offers intelligent assistance at the touch of the Copilot key for enhanced productivity and creativity.\n* **🎥 CRYSTAL-CLEAR VIDEO CONFERENCING & ALL-DAY BATTERY:** HP True Vision 720p HD camera with temporal noise reduction and integrated dual-array digital microphone delivers sharp, clear video calls for Zoom, Teams, and Google Meet. AI Noise Reduction filters out background noise for clearer conversations. Dual speakers provide clear audio. Up to 11 hours battery life (video playback) keeps you productive all day.\n* **🔌 MODERN CONNECTIVITY & EXPANDABLE STORAGE:** Wi-Fi 6 (2x2) with Bluetooth 5.4 ensures fast, reliable wireless connectivity. 1x USB Type-C (10Gbps with DisplayPort 1.2), 2x USB Type-A (5Gbps), HDMI 1.4b for external displays, headphone/microphone combo jack, and multi-format SD card reader for expandable storage. 45W AC power adapter provides efficient charging throughout the day.\n* **🎯 STYLISH ULTRA-PORTABLE DESIGN WITH MICROSOFT 365:** Lightweight at just 3.24 lbs with slim 0.71\" profile in stunning Honey Lavender matte finish with natural silver keyboard deck and vertical brushing pattern. 14\" HD micro-edge anti-glare display (250 nits, 62.5% sRGB, 79% screen-to-body ratio) perfect for work and entertainment. Includes 1-year Microsoft 365 Personal subscription (Word, Excel, PowerPoint, OneDrive). Ideal for students, remote workers, families, and travelers.",
+      "price": "319.98",
+      "thumbnail": "products/thumbnails/9/83f16c9b1360.jpg"
+    }
+  }
+]
