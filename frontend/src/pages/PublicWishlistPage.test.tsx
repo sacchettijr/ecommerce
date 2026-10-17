@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { ApiError } from "../api/client.ts";
 import {
@@ -93,6 +94,78 @@ describe("PublicWishlistPage", () => {
         ).not.toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Public" })).not.toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Private" })).not.toBeInTheDocument();
+    });
+
+    it("sorting by name reorders the visible items and their priority numbers", async () => {
+        const user = userEvent.setup();
+        mockedFetch.mockResolvedValue({
+            public_id: "abc",
+            items: [
+                makePublicWishlistItem({
+                    id: 1,
+                    position: 0,
+                    product: {
+                        id: 10,
+                        name: "Zebra Mug",
+                        slug: "zebra-mug",
+                        price: "19.90",
+                        thumbnail: null,
+                    },
+                }),
+                makePublicWishlistItem({
+                    id: 2,
+                    position: 1,
+                    product: {
+                        id: 20,
+                        name: "Apple Mug",
+                        slug: "apple-mug",
+                        price: "9.90",
+                        thumbnail: null,
+                    },
+                }),
+            ],
+        });
+
+        renderWithProviders(<PublicWishlistPage />, {
+            route: "/wishlist/abc",
+            path: "wishlist/:publicId",
+        });
+
+        await screen.findByText("Zebra Mug");
+        const names = () =>
+            screen
+                .getAllByRole("heading", { level: 3 })
+                .map((heading) => heading.textContent);
+        expect(names()).toEqual(["Zebra Mug", "Apple Mug"]);
+
+        await user.selectOptions(screen.getByLabelText("Sort by"), "Name: A-Z");
+
+        expect(names()).toEqual(["Apple Mug", "Zebra Mug"]);
+        expect(screen.getByLabelText("Priority 1")).toBeInTheDocument();
+        expect(screen.getByLabelText("Priority 2")).toBeInTheDocument();
+    });
+
+    it("renumbers priority sequentially from the visible items, ignoring gaps in the stored position", async () => {
+        mockedFetch.mockResolvedValue({
+            public_id: "abc",
+            items: [
+                // Stored positions have a gap (1 is missing — an owner-only private item
+                // sits there) — the displayed priority must still read 1, 2, 3, not 1, 3, 4.
+                makePublicWishlistItem({ id: 1, position: 0 }),
+                makePublicWishlistItem({ id: 2, position: 2 }),
+                makePublicWishlistItem({ id: 3, position: 3 }),
+            ],
+        });
+
+        renderWithProviders(<PublicWishlistPage />, {
+            route: "/wishlist/abc",
+            path: "wishlist/:publicId",
+        });
+
+        expect(await screen.findByLabelText("Priority 1")).toBeInTheDocument();
+        expect(screen.getByLabelText("Priority 2")).toBeInTheDocument();
+        expect(screen.getByLabelText("Priority 3")).toBeInTheDocument();
+        expect(screen.queryByLabelText("Priority 4")).not.toBeInTheDocument();
     });
 
     it("shows the own, editable wishlist page when the visitor owns this exact public link", async () => {

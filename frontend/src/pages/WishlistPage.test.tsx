@@ -157,6 +157,75 @@ describe("WishlistPage", () => {
         expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
 
+    it("sorting by price reorders the list and disables the move buttons", async () => {
+        const user = userEvent.setup();
+        mockedFetch.mockResolvedValue([
+            makeWishlistItem({
+                id: 1,
+                position: 0,
+                product: {
+                    id: 10,
+                    name: "Expensive Thing",
+                    slug: "expensive-thing",
+                    price: "99.00",
+                    thumbnail: null,
+                },
+            }),
+            makeWishlistItem({
+                id: 2,
+                position: 1,
+                product: {
+                    id: 20,
+                    name: "Cheap Thing",
+                    slug: "cheap-thing",
+                    price: "5.00",
+                    thumbnail: null,
+                },
+            }),
+        ]);
+
+        renderWithProviders(<WishlistPage />, { user: makeSessionUser() });
+
+        await screen.findByText("Expensive Thing");
+        const names = () =>
+            screen
+                .getAllByRole("heading", { level: 3 })
+                .map((heading) => heading.textContent);
+        expect(names()).toEqual(["Expensive Thing", "Cheap Thing"]);
+
+        await user.selectOptions(
+            screen.getByLabelText("Sort by"),
+            "Price: low to high",
+        );
+
+        expect(names()).toEqual(["Cheap Thing", "Expensive Thing"]);
+        for (const button of screen.getAllByRole("button", {
+            name: /move .* (up|down)/i,
+        })) {
+            expect(button).toBeDisabled();
+        }
+    });
+
+    it("switching back to priority sort re-enables the move buttons", async () => {
+        const user = userEvent.setup();
+        mockedFetch.mockResolvedValue([
+            makeWishlistItem({ id: 1, position: 0 }),
+            makeWishlistItem({ id: 2, position: 1 }),
+        ]);
+
+        renderWithProviders(<WishlistPage />, { user: makeSessionUser() });
+
+        await screen.findByLabelText("Priority 1");
+        const sortSelect = screen.getByLabelText("Sort by");
+        await user.selectOptions(sortSelect, "Price: low to high");
+        await user.selectOptions(sortSelect, "Priority");
+
+        const downButtons = screen.getAllByRole("button", {
+            name: /move .* down/i,
+        });
+        expect(downButtons[0]).not.toBeDisabled();
+    });
+
     it("the Add to cart button is inert: no request, no navigation", async () => {
         const user = userEvent.setup();
         mockedFetch.mockResolvedValue([makeWishlistItem({ id: 1 })]);

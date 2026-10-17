@@ -18,6 +18,12 @@ import {
     TrashIcon,
 } from "../components/ui/icons.tsx";
 import { formatPrice } from "../components/product/formatPrice.ts";
+import { WishlistSortSelect } from "../components/wishlist/WishlistSortSelect.tsx";
+import {
+    DEFAULT_WISHLIST_SORT,
+    sortWishlistItems,
+} from "../components/wishlist/wishlistSort.ts";
+import type { WishlistSort } from "../components/wishlist/wishlistSort.ts";
 import { useAsync } from "../hooks/useAsync.ts";
 import { useMessages } from "../hooks/useMessages.ts";
 import { useLanguage } from "../i18n/useLanguage.ts";
@@ -31,6 +37,10 @@ interface WishlistItemRowProps {
     isFirst: boolean;
     isLast: boolean;
     pending: boolean;
+    // Moving by priority only makes sense while the list is actually displayed in
+    // priority order — any other active sort disables these controls rather than moving
+    // an item to a position that won't visually match where it jumps to.
+    moveDisabled: boolean;
     language: string;
     t: Translations;
     onMoveUp: () => void;
@@ -44,6 +54,7 @@ function WishlistItemRow({
     isFirst,
     isLast,
     pending,
+    moveDisabled,
     language,
     t,
     onMoveUp,
@@ -58,7 +69,7 @@ function WishlistItemRow({
             <div className="flex shrink-0 flex-col items-center gap-1">
                 <button
                     type="button"
-                    disabled={pending || isFirst}
+                    disabled={pending || isFirst || moveDisabled}
                     aria-label={t.wishlist.moveUpLabel(product.name)}
                     onClick={onMoveUp}
                     className="rounded p-1 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
@@ -73,7 +84,7 @@ function WishlistItemRow({
                 </span>
                 <button
                     type="button"
-                    disabled={pending || isLast}
+                    disabled={pending || isLast || moveDisabled}
                     aria-label={t.wishlist.moveDownLabel(product.name)}
                     onClick={onMoveDown}
                     className="rounded p-1 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent"
@@ -152,6 +163,7 @@ export function WishlistPage() {
     const [override, setOverride] = useState<WishlistItem[] | null>(null);
     const [pendingId, setPendingId] = useState<number | null>(null);
     const [copyingLink, setCopyingLink] = useState(false);
+    const [sort, setSort] = useState<WishlistSort>(DEFAULT_WISHLIST_SORT);
     const requestTokenRef = useRef(0);
     const abortControllerRef = useRef<AbortController | null>(null);
     const { messages, beginAction, replaceMessages, dismissMessage } =
@@ -164,6 +176,7 @@ export function WishlistPage() {
 
     const items = override ?? data ?? null;
     const itemsLoading = loading && override === null;
+    const sortedItems = items !== null ? sortWishlistItems(items, sort) : null;
 
     const runAction = async (
         itemId: number,
@@ -272,53 +285,59 @@ export function WishlistPage() {
                 <Alert variant="error">{t.wishlist.loadError}</Alert>
             )}
 
-            {!itemsLoading && error === undefined && items !== null && (
+            {!itemsLoading && error === undefined && sortedItems !== null && (
                 <>
-                    {items.length === 0 ? (
+                    {sortedItems.length === 0 ? (
                         <p className="text-gray-600">{t.wishlist.emptyState}</p>
                     ) : (
-                        <div className="space-y-4">
-                            {items.map((item, index) => (
-                                <WishlistItemRow
-                                    key={item.id}
-                                    item={item}
-                                    isFirst={index === 0}
-                                    isLast={index === items.length - 1}
-                                    pending={pendingId === item.id}
-                                    language={language}
-                                    t={t}
-                                    onMoveUp={() =>
-                                        void runAction(item.id, (signal) =>
-                                            moveWishlistItem(item.id, "up", signal),
-                                        )
-                                    }
-                                    onMoveDown={() =>
-                                        void runAction(item.id, (signal) =>
-                                            moveWishlistItem(item.id, "down", signal),
-                                        )
-                                    }
-                                    onTogglePrivacy={() =>
-                                        void runAction(item.id, (signal) =>
-                                            toggleWishlistItemPrivacy(
-                                                item.id,
-                                                signal,
-                                            ),
-                                        )
-                                    }
-                                    onRemove={() =>
-                                        void runAction(
-                                            item.id,
-                                            (signal) =>
-                                                removeFromWishlistItem(
+                        <>
+                            <div className="mb-4 flex justify-end">
+                                <WishlistSortSelect value={sort} onChange={setSort} />
+                            </div>
+                            <div className="space-y-4">
+                                {sortedItems.map((item, index) => (
+                                    <WishlistItemRow
+                                        key={item.id}
+                                        item={item}
+                                        isFirst={index === 0}
+                                        isLast={index === sortedItems.length - 1}
+                                        pending={pendingId === item.id}
+                                        moveDisabled={sort !== DEFAULT_WISHLIST_SORT}
+                                        language={language}
+                                        t={t}
+                                        onMoveUp={() =>
+                                            void runAction(item.id, (signal) =>
+                                                moveWishlistItem(item.id, "up", signal),
+                                            )
+                                        }
+                                        onMoveDown={() =>
+                                            void runAction(item.id, (signal) =>
+                                                moveWishlistItem(item.id, "down", signal),
+                                            )
+                                        }
+                                        onTogglePrivacy={() =>
+                                            void runAction(item.id, (signal) =>
+                                                toggleWishlistItemPrivacy(
                                                     item.id,
                                                     signal,
                                                 ),
-                                            t.wishlist.itemRemoved,
-                                        )
-                                    }
-                                />
-                            ))}
-                        </div>
+                                            )
+                                        }
+                                        onRemove={() =>
+                                            void runAction(
+                                                item.id,
+                                                (signal) =>
+                                                    removeFromWishlistItem(
+                                                        item.id,
+                                                        signal,
+                                                    ),
+                                                t.wishlist.itemRemoved,
+                                            )
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        </>
                     )}
                 </>
             )}

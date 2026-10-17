@@ -7,6 +7,12 @@ import type { PublicWishlistItem } from "../api/types.ts";
 import { formatPrice } from "../components/product/formatPrice.ts";
 import { Tooltip } from "../components/ui/Tooltip.tsx";
 import { GiftIcon } from "../components/ui/icons.tsx";
+import { WishlistSortSelect } from "../components/wishlist/WishlistSortSelect.tsx";
+import {
+    DEFAULT_WISHLIST_SORT,
+    sortWishlistItems,
+} from "../components/wishlist/wishlistSort.ts";
+import type { WishlistSort } from "../components/wishlist/wishlistSort.ts";
 import { useAuth } from "../context/useAuth.ts";
 import { useAsync } from "../hooks/useAsync.ts";
 import { useLanguage } from "../i18n/useLanguage.ts";
@@ -19,10 +25,12 @@ const inertIconButtonClassName =
 
 function PublicWishlistItemRow({
     item,
+    priority,
     language,
     t,
 }: {
     item: PublicWishlistItem;
+    priority: number;
     language: string;
     t: Translations;
 }) {
@@ -32,9 +40,9 @@ function PublicWishlistItemRow({
         <div className="flex flex-col gap-4 rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-200 sm:flex-row sm:items-center">
             <span
                 className="shrink-0 text-center text-sm font-semibold text-gray-700 sm:w-16"
-                aria-label={t.wishlist.priorityLabel(item.position + 1)}
+                aria-label={t.wishlist.priorityLabel(priority)}
             >
-                {item.position + 1}
+                {priority}
             </span>
 
             <div className="flex aspect-square w-20 shrink-0 items-center justify-center overflow-hidden rounded border border-gray-100 bg-white">
@@ -82,6 +90,8 @@ function PublicWishlistItemRow({
 function PublicWishlist({ publicId }: { publicId: string }) {
     const { t, language } = useLanguage();
     const { data, error, loading } = useAsync(fetchPublicWishlist, publicId);
+    const [sort, setSort] = useState<WishlistSort>(DEFAULT_WISHLIST_SORT);
+    const sortedItems = data ? sortWishlistItems(data.items, sort) : null;
 
     if (error instanceof ApiError && error.status === 404) {
         return <NotFoundPage />;
@@ -104,23 +114,37 @@ function PublicWishlist({ publicId }: { publicId: string }) {
                     </p>
                 )}
 
-                {!loading && error === undefined && data !== undefined && (
+                {!loading && error === undefined && sortedItems !== null && (
                     <>
-                        {data.items.length === 0 ? (
+                        {sortedItems.length === 0 ? (
                             <p className="text-gray-600">
                                 {t.wishlist.publicEmptyState}
                             </p>
                         ) : (
-                            <div className="space-y-4">
-                                {data.items.map((item) => (
-                                    <PublicWishlistItemRow
-                                        key={item.id}
-                                        item={item}
-                                        language={language}
-                                        t={t}
+                            <>
+                                <div className="mb-4 flex justify-end">
+                                    <WishlistSortSelect
+                                        value={sort}
+                                        onChange={setSort}
                                     />
-                                ))}
-                            </div>
+                                </div>
+                                <div className="space-y-4">
+                                    {sortedItems.map((item, index) => (
+                                        <PublicWishlistItemRow
+                                            key={item.id}
+                                            item={item}
+                                            // Re-numbered from the currently displayed order,
+                                            // not the item's raw stored `position` — that
+                                            // numbering space is shared with the owner's hidden
+                                            // private items (gaps once filtered out here), and
+                                            // a non-default sort changes the visible order too.
+                                            priority={index + 1}
+                                            language={language}
+                                            t={t}
+                                        />
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </>
                 )}

@@ -256,6 +256,14 @@ export interface Translations {
         loadError: string;
         updateError: string;
         itemRemoved: string;
+        sortLabel: string;
+        sortPriority: string;
+        sortNameAsc: string;
+        sortNameDesc: string;
+        sortPriceAsc: string;
+        sortPriceDesc: string;
+        sortDateAddedAsc: string;
+        sortDateAddedDesc: string;
         addedOnLabel: (date: string) => string;
         priorityLabel: (position: number) => string;
         moveUpLabel: (name: string) => string;
