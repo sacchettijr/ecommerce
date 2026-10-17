@@ -67,6 +67,7 @@ export default {
         noProductImage: "Aucune image du produit",
         addToCartLabel: "Ajouter au panier",
         addToWishlist: "Ajouter à la liste de souhaits",
+        removeFromWishlist: "Retirer de la liste de souhaits",
         slideLabel: (position: number) => `Diapositive ${position}`,
         imageAlt: (name: string, position: number) =>
             `${name} - Image ${position}`,
@@ -265,5 +266,37 @@ export default {
         cityLabel: "Ville",
         stateLabel: "État/Province",
         countryLabel: "Pays",
+    },
+    wishlist: {
+        title: "Ma liste de souhaits | E-Commerce",
+        heading: "Ma liste de souhaits",
+        emptyState: "Votre liste de souhaits est vide.",
+        loadError:
+            "Impossible de charger votre liste de souhaits. Veuillez réessayer.",
+        updateError:
+            "Impossible de mettre à jour votre liste de souhaits. Veuillez réessayer.",
+        itemRemoved: "Article retiré de votre liste de souhaits.",
+        privacyUpdated: "Confidentialité de l'article mise à jour avec succès.",
+        addedOnLabel: (date: string) => `Ajouté le ${date}`,
+        priorityLabel: (position: number) => `Priorité ${position}`,
+        moveUpLabel: (name: string) => `Déplacer ${name} vers le haut`,
+        moveDownLabel: (name: string) => `Déplacer ${name} vers le bas`,
+        publicBadge: "Public",
+        privateBadge: "Privé",
+        makePublicLabel: "Rendre public",
+        makePrivateLabel: "Rendre privé",
+        deleteItem: "Retirer",
+        deleteItemAccessibleLabel: (name: string) =>
+            `Retirer ${name} de votre liste de souhaits`,
+        shareLinkLabel: "Partager ma liste de souhaits",
+        copyLinkLabel: "Copier le lien",
+        linkCopied: "Lien copié dans le presse-papiers.",
+        copyLinkError: "Impossible de copier le lien. Veuillez réessayer.",
+        giveAsGiftLabel: "Offrir en cadeau",
+        publicViewTitle: "Liste de souhaits | E-Commerce",
+        publicEmptyState: "Cette liste de souhaits n'a pas encore d'articles publics.",
+        notFoundTitle: "Liste de souhaits introuvable",
+        notFoundText:
+            "Ce lien de liste de souhaits n'est pas valide ou n'est plus disponible.",
     },
 } satisfies Translations;

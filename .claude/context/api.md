@@ -17,6 +17,13 @@ live schema/docs (not just installed — confirmed: `SpectacularAPIView`/
 | `/api/account/profile/` | self-service profile update (`name`/`date_birth`/`phone` only — `email` is not editable) for the authenticated session's own user (`IsAuthenticated`, no user id accepted — see `domain.md`); returns `{"user": {...}}`, same shape as login/signup |
 | `/api/account/addresses/` | list the authenticated session's own addresses (`IsAuthenticated`, no user/address id from the client can surface another user's data — see `domain.md`); plain JSON array, not paginated; primary first |
 | `/api/account/addresses/{id}/set-primary/` | POST, makes that address primary and unsets the user's other addresses atomically; 404 (not 403) if `{id}` doesn't belong to the requester, so it can't be used to probe whether an id exists; returns the user's full, fresh address list |
+| `/api/account/wishlist/` | GET lists the authenticated session's own wishlist items (public **and** private, `IsAuthenticated`); POST `{"product": <id>}` adds a product (400 if already present or inactive); not paginated. Added 2026-10-16 |
+| `/api/account/wishlist/{id}/` | DELETE removes that item; 404 (not 403) if it doesn't belong to the requester; returns the user's full, fresh item list |
+| `/api/account/wishlist/{id}/toggle-privacy/` | POST, flips that item's `private` flag; returns the full list |
+| `/api/account/wishlist/{id}/move/` | POST `{"direction": "up"\|"down"}`, swaps the item's position with its adjacent sibling (a no-op at either end of the list); returns the full list |
+| `/api/account/wishlist/check/?product=<id>` | GET, `{"in_wishlist": bool, "item_id": int\|null}` for the authenticated session's own wishlist — backs the product-page button's initial state |
+| `/api/account/wishlist/share-link/` | GET, `{"public_id": "<uuid>"}` — the authenticated session's own wishlist's public identifier |
+| `/api/account/wishlist/public/{public_id}/` | GET, `AllowAny` — a third party's wishlist by its opaque `public_id` (see `domain.md`); returns only `private=False` items, and the item shape has no `private` key at all |
 | `/api/product/products/`, `/api/product/products/{slug}/` | public product list/detail (`active=True` only); default order is a daily-seeded deterministic shuffle, not recency — see `domain.md`'s "Catalog ordering and randomization" |
 | `/api/product/categories/` | public category list (`active=True` only) |
 | `/api/core/contact/` | contact form submission (throttled, dispatches an email via Celery) |

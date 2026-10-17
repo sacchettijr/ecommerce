@@ -18,7 +18,9 @@ import { ProductDetailPage } from "./pages/ProductDetailPage.tsx";
 import { ProductListPage } from "./pages/ProductListPage.tsx";
 import { ProfileEditPage } from "./pages/ProfileEditPage.tsx";
 import { ProfilePage } from "./pages/ProfilePage.tsx";
+import { PublicWishlistPage } from "./pages/PublicWishlistPage.tsx";
 import { SignupPage } from "./pages/SignupPage.tsx";
+import { WishlistPage } from "./pages/WishlistPage.tsx";
 
 function App() {
     return (
@@ -63,6 +65,18 @@ function App() {
                             <AddressListPage />
                         </ProtectedRoute>
                     }
+                />
+                <Route
+                    path="profile/wishlist"
+                    element={
+                        <ProtectedRoute>
+                            <WishlistPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="wishlist/:publicId"
+                    element={<PublicWishlistPage />}
                 />
                 <Route
                     path="email-verification/:uid/:token"

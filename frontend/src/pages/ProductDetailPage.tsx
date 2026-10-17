@@ -1,15 +1,146 @@
-import { useParams } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useParams } from "react-router";
 
 import { ApiError } from "../api/client.ts";
 import { fetchProduct } from "../api/products.ts";
+import {
+    addToWishlist,
+    checkWishlistMembership,
+    removeFromWishlistItem,
+} from "../api/wishlist.ts";
+import { withNext } from "../auth/authRoutes.ts";
 import { ExpandableDescription } from "../components/product/ExpandableDescription.tsx";
 import { ImageCarousel } from "../components/product/ImageCarousel.tsx";
 import { ProductBreadcrumb } from "../components/product/ProductBreadcrumb.tsx";
 import { ProductPrice } from "../components/product/ProductPrice.tsx";
 import { CartPlusIcon, HeartIcon } from "../components/ui/icons.tsx";
+import { useAuth } from "../context/useAuth.ts";
 import { useAsync } from "../hooks/useAsync.ts";
 import { useLanguage } from "../i18n/useLanguage.ts";
 import { NotFoundPage } from "./NotFoundPage.tsx";
+
+function WishlistToggleButton({ productId }: { productId: number }) {
+    const { t } = useLanguage();
+    const { user } = useAuth();
+    const location = useLocation();
+    // null = not checked yet (guest, or the initial check hasn't resolved).
+    const [itemId, setItemId] = useState<number | null>(null);
+    const [checked, setChecked] = useState(false);
+    const [pending, setPending] = useState(false);
+    const [errorText, setErrorText] = useState<string | null>(null);
+    const requestTokenRef = useRef(0);
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    useEffect(() => {
+        if (!user) {
+            return;
+        }
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+        const token = (requestTokenRef.current += 1);
+
+        checkWishlistMembership(productId, controller.signal)
+            .then((result) => {
+                if (token !== requestTokenRef.current) {
+                    return;
+                }
+                setItemId(result.item_id);
+                setChecked(true);
+            })
+            .catch(() => {
+                // Leaves the button disabled-looking (checked stays false) rather than
+                // guessing a state that might trigger the wrong action.
+            });
+
+        return () => controller.abort();
+    }, [productId, user]);
+
+    useEffect(() => {
+        return () => abortControllerRef.current?.abort();
+    }, []);
+
+    if (!user) {
+        const next = `${location.pathname}${location.search}`;
+        return (
+            <Link
+                to={withNext("/login", next)}
+                className="inline-flex items-center gap-2 rounded-lg border border-blue-600 px-6 py-3 text-lg font-medium text-blue-600 hover:bg-blue-50"
+            >
+                <HeartIcon className="size-5" />
+                {t.product.addToWishlist}
+            </Link>
+        );
+    }
+
+    const inWishlist = itemId !== null;
+
+    const onClick = async () => {
+        if (pending || !checked) {
+            return;
+        }
+
+        abortControllerRef.current?.abort();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+        const token = (requestTokenRef.current += 1);
+        setPending(true);
+        setErrorText(null);
+
+        try {
+            if (inWishlist) {
+                await removeFromWishlistItem(itemId, controller.signal);
+                if (token !== requestTokenRef.current) {
+                    return;
+                }
+                setItemId(null);
+            } else {
+                const updated = await addToWishlist(productId, controller.signal);
+                if (token !== requestTokenRef.current) {
+                    return;
+                }
+                const created = updated.find(
+                    (item) => item.product.id === productId,
+                );
+                setItemId(created?.id ?? null);
+            }
+            setPending(false);
+        } catch (err) {
+            if (token !== requestTokenRef.current) {
+                return;
+            }
+            setPending(false);
+
+            if (err instanceof DOMException && err.name === "AbortError") {
+                return;
+            }
+
+            setErrorText(t.wishlist.updateError);
+        }
+    };
+
+    return (
+        <div>
+            <button
+                type="button"
+                disabled={!checked || pending}
+                onClick={() => void onClick()}
+                className="inline-flex items-center gap-2 rounded-lg border border-blue-600 px-6 py-3 text-lg font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-60"
+            >
+                <HeartIcon
+                    className="size-5"
+                    fill={inWishlist ? "currentColor" : "none"}
+                />
+                {inWishlist ? t.product.removeFromWishlist : t.product.addToWishlist}
+            </button>
+            {errorText && (
+                <p role="alert" className="mt-1 text-sm text-red-600">
+                    {errorText}
+                </p>
+            )}
+        </div>
+    );
+}
 
 function ProductDetail({ slug }: { slug: string }) {
     const { t } = useLanguage();
@@ -75,13 +206,7 @@ function ProductDetail({ slug }: { slug: string }) {
                                 <CartPlusIcon className="size-5" />
                                 {t.product.addToCartLabel}
                             </button>
-                            <button
-                                type="button"
-                                className="inline-flex items-center gap-2 rounded-lg border border-blue-600 px-6 py-3 text-lg font-medium text-blue-600 hover:bg-blue-50"
-                            >
-                                <HeartIcon className="size-5" />
-                                {t.product.addToWishlist}
-                            </button>
+                            <WishlistToggleButton productId={data.id} />
                         </div>
 
                         {data.description && (

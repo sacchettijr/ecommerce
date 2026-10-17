@@ -65,6 +65,7 @@ export interface Translations {
         noProductImage: string;
         addToCartLabel: string;
         addToWishlist: string;
+        removeFromWishlist: string;
         slideLabel: (position: number) => string;
         imageAlt: (name: string, position: number) => string;
     };
@@ -246,5 +247,33 @@ export interface Translations {
         cityLabel: string;
         stateLabel: string;
         countryLabel: string;
+    };
+    wishlist: {
+        title: string;
+        heading: string;
+        emptyState: string;
+        loadError: string;
+        updateError: string;
+        itemRemoved: string;
+        privacyUpdated: string;
+        addedOnLabel: (date: string) => string;
+        priorityLabel: (position: number) => string;
+        moveUpLabel: (name: string) => string;
+        moveDownLabel: (name: string) => string;
+        publicBadge: string;
+        privateBadge: string;
+        makePublicLabel: string;
+        makePrivateLabel: string;
+        deleteItem: string;
+        deleteItemAccessibleLabel: (name: string) => string;
+        shareLinkLabel: string;
+        copyLinkLabel: string;
+        linkCopied: string;
+        copyLinkError: string;
+        giveAsGiftLabel: string;
+        publicViewTitle: string;
+        publicEmptyState: string;
+        notFoundTitle: string;
+        notFoundText: string;
     };
 }

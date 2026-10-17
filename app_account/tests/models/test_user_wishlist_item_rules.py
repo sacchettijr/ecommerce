@@ -123,6 +123,23 @@ def test_added_at_is_set_automatically() -> None:
     assert cast("datetime", item.added_at) is not None
 
 
+def test_new_items_default_to_public() -> None:
+    item = add(wishlist_of(make_user()))
+
+    assert cast(bool, item.private) is False
+
+
+def test_toggling_privacy_does_not_affect_other_items() -> None:
+    wishlist = wishlist_of(make_user())
+    a, b = add(wishlist), add(wishlist)
+
+    a.private = True
+    a.save(update_fields=["private"])
+
+    assert cast(bool, UserWishlistItemModel.objects.get(pk=a.pk).private) is True
+    assert cast(bool, UserWishlistItemModel.objects.get(pk=b.pk).private) is False
+
+
 # ---------------------------------------------------------- duplicate product
 
 

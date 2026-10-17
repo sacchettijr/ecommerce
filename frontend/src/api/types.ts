@@ -71,6 +71,26 @@ export interface UserAddress {
     primary: boolean;
 }
 
+export interface WishlistItem {
+    id: number;
+    product: Product;
+    added_at: string;
+    position: number;
+    private: boolean;
+}
+
+export interface PublicWishlistItem {
+    id: number;
+    product: Product;
+    added_at: string;
+    position: number;
+}
+
+export interface PublicWishlist {
+    public_id: string;
+    items: PublicWishlistItem[];
+}
+
 export interface SessionUser {
     id: number;
     name: string;

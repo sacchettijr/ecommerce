@@ -51,7 +51,7 @@ describe("AccountLayout", () => {
         ).toHaveAttribute("href", "/profile/password");
     });
 
-    it("renders the remaining account items as inert (no destination yet)", () => {
+    it("renders orders as inert (no destination yet)", () => {
         renderWithProviders(
             <AccountLayout title="Account">
                 <p>Profile content</p>
@@ -64,7 +64,20 @@ describe("AccountLayout", () => {
         ).not.toBeInTheDocument();
         expect(screen.getByText("My orders")).toBeInTheDocument();
         expect(screen.getByText("My addresses")).toBeInTheDocument();
-        expect(screen.getByText("Wishlist")).toBeInTheDocument();
+    });
+
+    it("links to the wishlist page", () => {
+        renderWithProviders(
+            <AccountLayout title="Account">
+                <p>Profile content</p>
+            </AccountLayout>,
+            { user: makeSessionUser() },
+        );
+
+        expect(screen.getByRole("link", { name: "Wishlist" })).toHaveAttribute(
+            "href",
+            "/profile/wishlist",
+        );
     });
 
     it("only shows the admin link when the user is staff", () => {

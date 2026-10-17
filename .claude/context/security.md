@@ -7,7 +7,13 @@
   codes.
 - Global DRF default is `IsAuthenticated`; public endpoints explicitly opt
   out with `AllowAny`. Verify this stays true for any new endpoint — the
-  secure default is "authenticated," not "public."
+  secure default is "authenticated," not "public." `PublicWishlistViewSet`
+  (added 2026-10-16, `/api/account/wishlist/public/{public_id}/`) is the
+  first `AllowAny` endpoint under `app_account` that serves one user's
+  data to an arbitrary, possibly-unauthenticated visitor — it's safe only
+  because the data it serves is deliberately scoped (public items only,
+  looked up by an unguessable id) rather than because the endpoint itself
+  is "read-only."
 - A third tier, `IsAdminUser` (DRF's built-in staff-only permission), is
   now in use too — `app_address/api/viewsets/{StateListViewSet,
   CityListViewSet}.py`, added 2026-10-16 to back the Django Admin's own
@@ -34,23 +40,37 @@
   whether the change is allowed.
 - **No endpoint that returns or mutates personal account data accepts a
   client-supplied user identifier.** `/api/account/session/`,
-  `/api/account/password-change/`, `/api/account/profile/`, and
-  `/api/account/addresses/` (list + `set-primary`) all resolve the
-  target user exclusively from `request.user` (the authenticated
-  session) — confirmed by reading every viewset and by tests that
-  deliberately try to smuggle another user's id/email into the request
-  (or, for addresses, another user's address id) and assert it has no
-  effect. If a future endpoint needs to look up a user, keep following
-  this pattern (resolve from the session, never from a request
-  parameter) rather than trusting an id and checking it against
-  `request.user` afterward.
-- **`UserAddressViewSet.set_primary` 404s, not 403, on another user's
-  address id.** `get_object()` is called against a queryset already
-  filtered to `request.user`'s own addresses, so an id belonging to
-  someone else looks identical to an id that doesn't exist at all — an
-  attacker can't use the response to tell "exists but isn't yours" apart
-  from "doesn't exist," consistent with this project's anti-enumeration
-  posture elsewhere (resend-verification, password-reset).
+  `/api/account/password-change/`, `/api/account/profile/`,
+  `/api/account/addresses/` (list + `set-primary`), and
+  `/api/account/wishlist/...` (list/add/remove/toggle-privacy/move/check/
+  share-link) all resolve the target user/wishlist exclusively from
+  `request.user` (the authenticated session) — confirmed by reading every
+  viewset and by tests that deliberately try to smuggle another user's
+  id/email, or another user's address/wishlist-item id, into the request
+  and assert it has no effect. If a future endpoint needs to look up a
+  user, keep following this pattern (resolve from the session, never
+  from a request parameter) rather than trusting an id and checking it
+  against `request.user` afterward.
+- **`UserAddressViewSet.set_primary` and every owner-scoped
+  `WishlistItemViewSet` action (`destroy`/`toggle-privacy`/`move`) 404,
+  not 403, on another user's address/item id.** `get_object()` is called
+  against a queryset already filtered to `request.user`'s own rows, so an
+  id belonging to someone else looks identical to an id that doesn't
+  exist at all — an attacker can't use the response to tell "exists but
+  isn't yours" apart from "doesn't exist," consistent with this project's
+  anti-enumeration posture elsewhere (resend-verification, password-reset).
+- **Wishlist item privacy is enforced at the queryset layer, before
+  serialization, not by a serializer field filter alone.**
+  `PublicWishlistViewSet`/`PublicWishlistSerializer` explicitly filter to
+  `private=False` when building the list handed to
+  `PublicWishlistItemSerializer`, and that serializer's `Meta.fields` has
+  no `private` key at all — there is no field left to leak even if the
+  queryset filter were ever accidentally removed. Confirmed by a test
+  that asserts the word `"private"` never appears as a key anywhere in
+  the public endpoint's response. The public wishlist lookup itself uses
+  an unguessable opaque `public_id` (UUID), not the sequential numeric
+  user id, specifically so a visitor can't enumerate accounts by
+  incrementing an id in the URL — see `domain.md`.
 - **Protected/administrative fields can't be set through the profile-edit
   endpoint**, not because of explicit filtering code but because
   `UserUpdateForm.Meta.fields` only lists `name`/`date_birth`/`phone` —

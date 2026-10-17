@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { render } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 
 import { AuthContext } from "../context/AuthContext.ts";
 import type { AuthState } from "../context/AuthContext.ts";
@@ -13,6 +13,9 @@ interface RenderOptions {
     user?: SessionUser | null;
     loading?: boolean;
     route?: string;
+    // A react-router path pattern (e.g. "product/:slug") to match `route` against — needed
+    // only when `ui` itself calls useParams(); omit it to render `ui` directly, as before.
+    path?: string;
     setUser?: (user: SessionUser | null) => void;
 }
 
@@ -22,6 +25,7 @@ export function renderWithProviders(
         user = null,
         loading = false,
         route = "/",
+        path,
         setUser = () => {},
     }: RenderOptions = {},
 ) {
@@ -37,7 +41,15 @@ export function renderWithProviders(
                     t: translations.en,
                 }}
             >
-                <AuthContext value={authValue}>{ui}</AuthContext>
+                <AuthContext value={authValue}>
+                    {path ? (
+                        <Routes>
+                            <Route path={path} element={ui} />
+                        </Routes>
+                    ) : (
+                        ui
+                    )}
+                </AuthContext>
             </LanguageContext>
         </MemoryRouter>,
     );

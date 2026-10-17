@@ -65,17 +65,23 @@ young, actively-evolving prototype, not a mature codebase).
   rapid/overlapping selections and failures are reconciled against the
   backend's authoritative state). Add/Edit/Delete are rendered but
   intentionally inert (`aria-disabled`, no handlers, accessible tooltips)
-  — no create/edit/delete workflow exists yet. Remaining sidebar/dropdown
-  destinations (orders, wishlist) stay inert placeholders — no pages
-  exist for them yet.
-- `UserWishlistModel`/`UserWishlistItemModel` (2026-10-15): backend only —
-  one wishlist per user (auto-created on signup via signal), unlimited
-  items with no duplicate product per list (DB constraint + clear form
-  error), gap-free `position` with insertion/reorganization/deletion all
-  handled consistently, mirroring `ProductImageModel`'s established
-  pattern. Admin-manageable (`UserWishlistAdmin` with an items inline,
-  `UserWishlistItemAdmin`). No API endpoint and no frontend wiring yet —
-  see `domain.md`.
+  — no create/edit/delete workflow exists yet. The remaining sidebar/
+  dropdown destination, orders, stays an inert placeholder — no page
+  exists for it yet (wishlist is no longer in this category, see below).
+- `/profile/wishlist` and `/wishlist/:publicId` (2026-10-16): full-stack
+  now — one wishlist per user (auto-created on signup via signal),
+  unlimited items with no duplicate product per list (DB constraint +
+  clear error), a `private` flag per item (default public), gap-free
+  `position` with insertion/reorganization/deletion all handled
+  consistently (mirroring `ProductImageModel`'s established pattern,
+  except the `move` up/down action — see `domain.md` for why that one
+  action deliberately doesn't reuse the shared reorganizer), and an
+  opaque `public_id` (UUID) for the public view URL. Own page shows
+  public+private items, move/delete/privacy controls, and a share-link
+  action; the public page shows only public items, no edit controls, and
+  an inert "give as a gift" button. The product detail page's wishlist
+  button is wired to real add/remove. "Add to cart" (both pages) and
+  "Give as a gift" stay visual-only. See `domain.md`/`api.md`.
 
 ## Partially implemented
 
@@ -102,15 +108,14 @@ young, actively-evolving prototype, not a mature codebase).
   (admin remains the only way).
 - **Automated CI** — no GitHub Actions, no pre-commit hooks, no Makefile.
 - **Frontend tests** — Vitest + React Testing Library installed
-  2026-10-13 (see `testing.md`), but only the authenticated account area
-  (`AccountLayout`/`ProfilePage`/`ProfileEditPage`/`ProtectedRoute`/
-  `PasswordChangePage`/`AddressListPage`/`useMessages`) plus one
-  standalone utility (`sanitizePhoneInput`), 59 tests total, is covered;
-  everything else in the frontend (including `SignupPage.tsx`/`ContactPage.tsx`)
-  still has zero tests.
+  2026-10-13 (see `testing.md`), 117 tests total as of 2026-10-16,
+  covering the authenticated account area, the public product pages'
+  extracted pieces, the wishlist pages, and `ProductDetailPage.tsx`/
+  `UserMenu.tsx` (both newly covered this task); `SignupPage.tsx`/
+  `ContactPage.tsx`/`HomePage.tsx` as a whole still have zero tests.
 - **Route guarding** on the frontend — now exists (`ProtectedRoute.tsx`),
-  used by `/profile`, `/profile/edit`, `/profile/password`, and
-  `/profile/addresses`.
+  used by `/profile`, `/profile/edit`, `/profile/password`,
+  `/profile/addresses`, and `/profile/wishlist`.
 
 ## Immediate priorities (if asked "what's next," ground the answer here)
 
@@ -125,7 +130,5 @@ young, actively-evolving prototype, not a mature codebase).
    or whether admin remains the only way to add/remove an address.
 4. Fix the stale `backend/`-prefixed paths in `README.md` and
    `docs/render.md` (confirmed wrong — see `../memory/known_issues.md`).
-5. Decide whether the wishlist gets an API + frontend (model/admin layer
-   is done, see `domain.md`) — same shape of decision as item 3 above.
 5. Nothing beyond this list is a "confirmed plan" — see `roadmap.md` for
    the distinction between documented intent and open suggestions.

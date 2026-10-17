@@ -11,9 +11,11 @@ from app_account.api.viewsets import (
     PasswordChangeViewSet,
     PasswordResetViewSet,
     ProfileUpdateViewSet,
+    PublicWishlistViewSet,
     SessionViewSet,
     SignUpViewSet,
     UserAddressViewSet,
+    WishlistItemViewSet,
 )
 
 router = DefaultRouter()
@@ -62,6 +64,16 @@ router.register(
     prefix="addresses",
     viewset=UserAddressViewSet,
     basename="user_address",
+)
+router.register(
+    prefix="wishlist",
+    viewset=WishlistItemViewSet,
+    basename="wishlist_item",
+)
+router.register(
+    prefix="wishlist/public",
+    viewset=PublicWishlistViewSet,
+    basename="wishlist_public",
 )
 
 urlpatterns: list[URLPattern | URLResolver] = [

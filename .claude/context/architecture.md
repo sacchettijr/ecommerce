@@ -97,12 +97,13 @@ Render today, by explicit documented tradeoff, not by accident.
   (`frontend/src/pages/ProfilePage.tsx` at `/profile`,
   `frontend/src/pages/ProfileEditPage.tsx` at `/profile/edit`,
   `frontend/src/pages/PasswordChangePage.tsx` at `/profile/password`,
-  `frontend/src/pages/AddressListPage.tsx` at `/profile/addresses`) — a
+  `frontend/src/pages/AddressListPage.tsx` at `/profile/addresses`,
+  `frontend/src/pages/WishlistPage.tsx` at `/profile/wishlist`) — a
   sidebar nav (reusing `userMenu.*` translation keys, mirroring
   `UserMenu.tsx`'s dropdown items) plus a content region and a
-  message/alert area. New account pages (orders, wishlist — none exist
-  yet) should nest inside this layout rather than duplicating its sidebar
-  or message handling.
+  message/alert area. A future "orders" page (doesn't exist yet) should
+  nest inside this layout the same way, rather than duplicating its
+  sidebar or message handling.
 - **Local-override pattern for a fetched list the UI also mutates**:
   `AddressListPage.tsx` is the reference — `useAsync(fetchUserAddresses, undefined)`
   supplies the initial load, and a local `override` state (same shape as

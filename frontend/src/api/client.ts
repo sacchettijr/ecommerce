@@ -101,3 +101,7 @@ export function apiPost<T>(
         signal,
     });
 }
+
+export function apiDelete<T>(path: string, signal?: AbortSignal): Promise<T> {
+    return request<T>(path, { method: "DELETE", signal });
+}

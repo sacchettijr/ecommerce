@@ -105,10 +105,18 @@ export function AccountLayout({
                                 <MapPinIcon className="size-5 shrink-0" />
                                 {t.userMenu.addresses}
                             </NavLink>
-                            <span className={reservedNavItemClassName}>
+                            <NavLink
+                                to="/profile/wishlist"
+                                end
+                                className={({ isActive }) =>
+                                    isActive
+                                        ? activeNavItemClassName
+                                        : inactiveNavItemClassName
+                                }
+                            >
                                 <HeartIcon className="size-5 shrink-0" />
                                 {t.userMenu.wishlist}
-                            </span>
+                            </NavLink>
                             {user?.is_staff && (
                                 <a
                                     href="/admin/"

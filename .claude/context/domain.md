@@ -369,10 +369,13 @@ still overrides it exactly as before.
 
 ## Wishlist (`account.UserWishlistModel`/`UserWishlistItemModel`, app_account)
 
-Backend-only as of 2026-10-15 — no API endpoint, no frontend wiring; the
-`UserMenu.tsx` wishlist link is still the same inert placeholder described
-below. Admin (`UserWishlistAdmin`/`UserWishlistItemAdmin`, with an inline
-for items) is the only way to operate on it today.
+Full-stack as of 2026-10-16: `/api/account/wishlist/` (own list, add,
+remove, toggle-privacy, move, check, share-link) and
+`/api/account/wishlist/public/<public_id>/` (third-party view, `AllowAny`),
+plus `/profile/wishlist` (own page) and `/wishlist/:publicId` (public page)
+on the frontend. Admin (`UserWishlistAdmin`/`UserWishlistItemAdmin`, with
+an inline for items) still exists as a secondary way to inspect/manage it,
+but is no longer the only way.
 
 - **One wishlist per user**: `UserWishlistModel.user` is a plain
   `OneToOneField(CASCADE)` — the DB unique index on `user_id` is the whole
@@ -386,29 +389,100 @@ for items) is the only way to operate on it today.
   future management commands) without each one remembering to call it — a
   signal registered once in `AccountConfig.ready()` (same `import_module`
   pattern as `promote_primary_address_after_delete`) covers all of them
-  uniformly. `get_or_create` keeps it idempotent against a double-fire.
+  uniformly. `get_or_create` keeps it idempotent against a double-fire; the
+  viewset layer also calls `get_or_create` defensively before add/share-link
+  (race-safe: Django retries the `get()` once on a concurrent
+  `IntegrityError`), so a legacy/edge-case user without a wishlist row still
+  gets one safely on first use.
+- **`public_id`** (`UUIDField`, `default=uuid4`, `unique=True`,
+  `editable=False`, on `UserWishlistModel`): the opaque handle used in the
+  public URL/endpoint. Chosen over the raw numeric `user.id` (would let
+  anyone enumerate accounts by incrementing it) and over a name-derived
+  slug (`UserModel` has no public-facing identifier at all — no
+  username/slug exists anywhere in `app_account`, confirmed by a full grep
+  — adding one would have been new, larger scope than this feature needed).
+  Added via a hand-written 3-step migration (`0004_...`): nullable column
+  → `RunPython` backfill with one fresh UUID per existing row → `AlterField`
+  to enforce `unique=True`. A single-step `AddField` would have given every
+  pre-existing row the *same* generated UUID (Django computes a callable
+  default once for the backfill SQL), which breaks uniqueness on any table
+  with more than one row — see Django's own docs on adding a unique field
+  with a callable default.
+- **`private`** (`BooleanField`, default `False`, on
+  `UserWishlistItemModel`): `False` = visible on the public endpoint,
+  `True` = owner-only. Enforced at the queryset layer, before
+  serialization — `WishlistItemViewSet.get_queryset()` (owner's own view)
+  filters only by `wishlist__user=request.user` (includes both), while
+  `PublicWishlistSerializer.get_items()` explicitly filters
+  `private=False` before handing rows to `PublicWishlistItemSerializer`,
+  which has no `private` field at all in its `Meta.fields` — there is no
+  field to accidentally leak even if the filter were ever removed.
 - **Items**: unlimited per list, but **no duplicate product in the same
   list** — `UniqueConstraint(wishlist, product)`, a real user error
-  surfaced as a clear `ModelForm` validation error (not auto-corrected).
-  The same product can appear in different users' lists.
+  surfaced as a clear `ModelForm`/`WishlistItemCreateSerializer` validation
+  error (not auto-corrected). The same product can appear in different
+  users' lists.
 - **`position`** (`PositiveIntegerField`, default `0`, 0-based): deliberately
   *not* the task's literal "1 = first" suggestion — `ProductImageModel.order`
   already established an equivalent, 0-based, gap-free pattern in this
   codebase, and reusing that pattern (not inventing a second convention)
-  was judged more valuable than matching the literal suggestion. New items
-  always append to the end (there is no form field for `position` yet —
-  admin shows it read-only — so there is currently no sanctioned way to
-  request a specific position on create). Repositioning an existing item
-  (`item.position = N; item.save()`) re-flows all siblings gap-free via
-  `organize_wishlist_items()`, a per-app copy of
+  was judged more valuable than matching the literal suggestion (the
+  frontend displays `position + 1` as the human-facing "Priority N").
+  New items always append to the end (there is no form field for
+  `position` on create — admin shows it read-only, and
+  `WishlistItemCreateSerializer` doesn't expose it either). Repositioning
+  an existing item on create-adjacent paths (`item.position = N;
+  item.save()`, e.g. moving it to another wishlist) re-flows all siblings
+  gap-free via `organize_wishlist_items()`, a per-app copy of
   `organize_product_images()`'s anchor-insert algorithm (deliberately not
-  shared across apps — see `conventions.md`). `UniqueConstraint(wishlist,
-  position)` is `Deferrable.DEFERRED` so a multi-row reorder inside one
-  transaction doesn't trip it mid-flight. `save()` locks the parent
-  wishlist row (`select_for_update`) first, so concurrent inserts can't
-  both compute the same "next" position. A `post_delete` signal
+  shared across apps — see `conventions.md`).
+  **The `move` (up/down) API action deliberately does NOT reuse
+  `organize_wishlist_items()`/`.save()`**: that anchor-insert algorithm
+  assumes the *other* items are already gap-free once the anchor is
+  excluded, which only holds when the anchor is being freshly inserted
+  (create, or moving to a different wishlist). For an in-place move,
+  excluding the anchor from an already-contiguous range leaves a gap at
+  its *old* slot, and re-inserting it by "first sibling position ≥
+  target" silently recomputes the anchor back to its original position for
+  an adjacent swap — confirmed by a failing test before this was corrected
+  (see `app_account/tests/api/test_wishlist_item_api.py`). `move` instead
+  does a plain, explicit two-row position swap with the adjacent sibling,
+  inside `transaction.atomic()` with the wishlist row locked
+  (`select_for_update`) first — the same locking granularity as every
+  other reorganizer in this codebase, just not routed through `.save()`.
+  `UniqueConstraint(wishlist, position)` is `Deferrable.DEFERRED` so the
+  two-row swap doesn't trip it mid-transaction. A `post_delete` signal
   (`reorganize_wishlist_items_after_delete.py`) closes the gap after a
-  deletion — mirroring `app_product.signals.product_image` exactly.
+  deletion — mirroring `app_product.signals.product_image` exactly; this
+  signal already existed before this feature and needed no changes.
+- **Frontend**: `/profile/wishlist` (`WishlistPage.tsx`) shows the owner's
+  full list (public + private), move up/down buttons (showing a plain
+  position number, `item.position + 1`, with the "Priority N" text only
+  as an `aria-label` — not visible text, per user feedback 2026-10-16), a
+  public/private toggle, delete, an inert "Add to cart" button, and a
+  "copy my wishlist link" action (`/account/wishlist/share-link/`).
+  `/wishlist/:publicId` (`PublicWishlistPage.tsx`) shows only public
+  items, the same plain position number, no edit/delete/privacy controls,
+  and an inert "Give as a gift" button — **for anyone anonymous or not
+  the owner**. **If the signed-in visitor turns out to own this exact
+  `public_id`** (checked in the background via `/account/wishlist/
+  share-link/`, compared against the URL param — added 2026-10-16 per
+  user feedback), `PublicWishlistPage` swaps to rendering `WishlistPage`
+  directly instead, so the owner visiting their own share link gets the
+  full editable view with private items, not the restricted public one.
+  This check starts as `false` and only flips in the background — an
+  anonymous or different-user visitor sees the public view immediately,
+  with no added request and no behavior change, and the real data
+  boundary is still the backend: `/account/wishlist/public/...` itself
+  never returns private items to anyone regardless of this check, so a
+  wrong/bypassed frontend decision here can't leak anything — it would
+  just show the wrong *view*, not wrong *data*. `ProductDetailPage.tsx`'s
+  wishlist button checks real membership via `/account/wishlist/check/`
+  on load (only when authenticated) and toggles between "Add to
+  wishlist"/"Remove from wishlist" after a successful backend response;
+  guests see a link to `/login?next=...` instead of a dead button. "Add
+  to cart" and "Give as a gift" are explicitly visual-only per the
+  original task's scope — no cart/order/payment logic exists.
 
 ## Shopping cart / checkout — confirmed absent
 
@@ -417,12 +491,14 @@ checkout implementation anywhere**:
 
 - Backend: no `Cart`/`CartItem`/`Order` model, serializer, viewset, or URL.
 - Frontend: the cart link in `Navbar.tsx` is a dead `<a href="#">` with no
-  handler; the "Add to cart" button on `ProductDetailPage.tsx` has no
-  `onClick`; `UserMenu.tsx`'s profile/orders/addresses/wishlist items are
-  all inert buttons with an explicit code comment acknowledging they're
-  "reserved for when they exist." Translation strings for all of the above
-  exist in every locale, but there is zero state, API, or routing behind
-  them.
+  handler; the "Add to cart" button on `ProductDetailPage.tsx` and the
+  wishlist page both have inert "Add to cart" buttons; `UserMenu.tsx`'s
+  "orders" item is still an inert button with an explicit code comment
+  acknowledging it's "reserved for when it exists" — **addresses and
+  wishlist are no longer in this category** (both have real pages/API now,
+  see the Wishlist section above and `../memory/changelog.md`). Translation
+  strings for cart exist in every locale, but there is zero state, API, or
+  routing behind it.
 
 Treat any task that assumes a working cart as requiring that feature to be
 built from scratch, not extended.

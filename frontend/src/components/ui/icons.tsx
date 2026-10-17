@@ -175,3 +175,39 @@ export function HeartIcon(props: SVGProps<SVGSVGElement>) {
         />
     );
 }
+
+export function ArrowUpIcon(props: SVGProps<SVGSVGElement>) {
+    return (
+        <Icon
+            shapes="M12 19.5v-15m0 0-6.75 6.75M12 4.5l6.75 6.75"
+            {...props}
+        />
+    );
+}
+
+export function ArrowDownIcon(props: SVGProps<SVGSVGElement>) {
+    return (
+        <Icon
+            shapes="M12 4.5v15m0 0-6.75-6.75M12 19.5l6.75-6.75"
+            {...props}
+        />
+    );
+}
+
+export function ArrowRightOnRectangleIcon(props: SVGProps<SVGSVGElement>) {
+    return (
+        <Icon
+            shapes="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l3 3m0 0-3 3m3-3H3"
+            {...props}
+        />
+    );
+}
+
+export function GiftIcon(props: SVGProps<SVGSVGElement>) {
+    return (
+        <Icon
+            shapes="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 9.75v-9.75m0 0h8.25a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75H12m0-6h-8.25a.75.75 0 0 0-.75.75v4.5c0 .414.336.75.75.75H12"
+            {...props}
+        />
+    );
+}

@@ -1074,3 +1074,105 @@ no Chrome DevTools MCP connection was available this session either;
 the jsdom tests are real but synthetic-DOM coverage, and the responsive
 CSS layout has no automated check, documented as a manual-verification
 item instead.
+
+## 2026-10-16 — Wishlist made real end-to-end (privacy, reorder, public view, product-page integration)
+
+The backend models/signals already existed (see the entries above) but
+were wired to nothing — no API, no migration for the new fields, three
+inert frontend placeholders. This task built the full feature:
+
+**Backend**: `UserWishlistItemModel.private` (`BooleanField`, default
+`False`) and `UserWishlistModel.public_id` (`UUIDField`, `default=uuid4`,
+`unique=True`) — the opaque handle for "view a third party's wishlist",
+chosen over the numeric user id (enumeration) and over a new slug field
+(no public identifier exists anywhere in `app_account` today, confirmed
+by a full grep; building one would have been new, larger scope).
+Migration `0004_userwishlistitemmodel_private_and_more.py` hand-adjusted
+into Django's documented 3-step pattern for adding a unique field with a
+callable default (nullable column → `RunPython` per-row backfill →
+`AlterField` to enforce uniqueness) — a plain single-step `AddField`
+would have given every pre-existing row the identical UUID. Applied and
+confirmed (`showmigrations`, then a direct DB check that the existing
+row got a real, non-null, distinct `public_id`).
+
+New `WishlistItemViewSet` (list/create/destroy own items +
+`toggle-privacy`/`move`/`check`/`share-link` actions, all scoped to
+`request.user`, 404 not 403 for another user's item — mirrors
+`UserAddressViewSet`) and `PublicWishlistViewSet` (`AllowAny`, looked up
+by `public_id`, serializes only `private=False` items through a
+serializer that has no `private` field at all). Registered at
+`/api/account/wishlist/...` and `/api/account/wishlist/public/...`.
+
+**The `move` action does not reuse `organize_wishlist_items()`** — traced
+and proved (via a failing test, written before the fix) that its
+anchor-insert algorithm silently undoes an adjacent-swap move, because
+excluding the anchor from an already-contiguous list leaves a gap at its
+*old* slot rather than a gap-free remainder. `move` instead does a direct
+two-row position swap under `select_for_update()`, relying on the
+existing `Deferrable.DEFERRED` constraint — see `domain.md` for the full
+trace, since this is the kind of thing worth not re-deriving later.
+
+**Frontend**: new `WishlistPage.tsx` (`/profile/wishlist`) and
+`PublicWishlistPage.tsx` (`/wishlist/:publicId`), both following
+`AddressListPage.tsx`'s override/request-token/abort-controller pattern.
+Wired the three previously-inert placeholders:
+`AccountLayout.tsx`/`UserMenu.tsx`'s wishlist links now navigate for
+real, and `ProductDetailPage.tsx`'s wishlist button now checks real
+membership on load and toggles add/remove, with a login link for guests.
+"Add to cart" and "Give as a gift" stay inert per the task's explicit
+scope — no cart/order logic added. Three new icons
+(`ArrowUpIcon`/`ArrowDownIcon`/`GiftIcon`) added to `icons.tsx`, same
+hand-inlined-path convention as every existing one. New `wishlist` i18n
+section plus `product.removeFromWishlist`, translated into all five
+locales (not just English). `apiDelete` added to `client.ts` (the first
+DELETE-verb endpoint in this frontend) for the remove action.
+
+**Testing**: `app_account/tests/api/test_wishlist_item_api.py` (34
+tests) and `test_public_wishlist_api.py` (8 tests), plus two new model
+tests for `private`'s default and isolation. Frontend:
+`WishlistPage.test.tsx`, `PublicWishlistPage.test.tsx`,
+`ProductDetailPage.test.tsx` (the project's first test of that page as a
+whole), `UserMenu.test.tsx` (new file — that component had no tests at
+all before). `renderWithProviders` gained an optional `path` option to
+support testing any page that calls `useParams()`, which no prior test
+needed.
+
+**Verification**: `manage.py check`, `makemigrations --check --dry-run`
+(exactly the two expected field additions, nothing swept in),
+`showmigrations` before/after `migrate`, full `pytest` — 251 passed (no
+regressions), `ruff check`/`ruff format --check`/`mypy`/`basedpyright`
+all clean. `tsc -b`, `eslint .`, full Vitest — 117 passed, `npm run
+build`. **Not verified**: an actual browser click-through (no Chrome
+DevTools MCP connection available this session); all backend/frontend
+checks above were run directly against the live containers, and the new
+migration was actually applied (not just generated), confirmed via a
+direct DB read.
+
+## 2026-10-16 (same day, follow-up) — UserMenu icons, priority display, owner-aware public wishlist link
+
+Three small user-requested adjustments to the wishlist feature above:
+
+- `UserMenu.tsx` (the navbar's "Hello, {name}" dropdown) had no icons at
+  all next to its items — added the same icons `AccountLayout.tsx` already
+  uses for the same destinations (`UserIcon`/`PencilIcon`/
+  `LockClosedIcon`/`ArchiveBoxIcon`/`MapPinIcon`/`HeartIcon`/
+  `ShieldCheckIcon`), plus one new icon, `ArrowRightOnRectangleIcon`, for
+  logout (no existing icon fit; same hand-inlined-Heroicons-path
+  convention as every other icon in `icons.tsx`).
+- The "Priority N" label on both wishlist pages showed the word
+  "Priority"/"Prioridade" — changed to show just the plain number
+  (`item.position + 1`), with the translated label moved to `aria-label`
+  for accessibility rather than removed outright.
+- `PublicWishlistPage.tsx` always rendered the restricted public-only view
+  before, even for the owner visiting their own share link — now checks
+  (in the background, via `/account/wishlist/share-link/`) whether the
+  signed-in visitor's own `public_id` matches the URL's, and if so swaps
+  to rendering `WishlistPage` directly (full own list, private items,
+  edit controls) instead. Anonymous/different-user visitors are
+  unaffected — the check starts `false` and only flips after confirming
+  ownership, so the public view still renders immediately with no added
+  request for the common case. See `domain.md`'s Wishlist section.
+
+Verified: `tsc -b`, `eslint .`, full Vitest — 119 passed (two new tests
+added for the owner-detection swap, two existing tests updated for the
+priority-number change).

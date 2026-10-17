@@ -10,7 +10,7 @@ data. Each app follows `tests/{api,models,views}/` + `tests/factories/`.
 
 | App | Coverage |
 |---|---|
-| `app_account/` (label `account`) | Partial. Well covered: login/logout/session/signup/email-verification/password-reset/password-change (including the unchanged-password rejection)/profile-update flows, `is_staff` admin gate, `safe_next_path`, `frontend_scheme_and_domain` (`app_account/tests/api/test_auth_api.py`, `app_account/tests/test_frontend_url.py`); `UserAddressModel`'s primary-address invariant (first-is-primary, demote-on-set, promote-on-delete including the admin-formset-deletion edge case, DB constraint, cross-user isolation via the actual inline formset) and the `/api/account/addresses/` list/set-primary endpoints, including cross-user access attempts (`app_account/tests/models/test_user_address_rules.py`, `app_account/tests/api/test_user_address_api.py`); the country/state/city cross-field validation (`app_account/tests/models/test_user_address_form.py`); the address admin's rendered field order, standalone and inline (`app_account/tests/test_user_address_admin.py`); `UserWishlistModel`/`UserWishlistItemModel` — auto-creation on every user-creation path, one-wishlist-per-user, duplicate-product rejection (DB + form error message), `position` append/reorg/gap-closing/cross-wishlist isolation, DB constraints (`app_account/tests/models/test_user_wishlist_rules.py`, `test_user_wishlist_item_rules.py`); the migration graph loads and matches model state (`app_account/tests/test_migrations.py`, written after the `NodeNotFoundError` incident — see `../memory/known_issues.md`). **Not covered**: `UserManagerModel` edge cases, every form except the auth/address/wishlist ones exercised via the API tests, `app_account/signals/create_default_superuser.py`, `app_account/management/commands/create_admin.py`, the wishlist admin inline formset (no API/UI exists yet to drive it). |
+| `app_account/` (label `account`) | Partial. Well covered: login/logout/session/signup/email-verification/password-reset/password-change (including the unchanged-password rejection)/profile-update flows, `is_staff` admin gate, `safe_next_path`, `frontend_scheme_and_domain` (`app_account/tests/api/test_auth_api.py`, `app_account/tests/test_frontend_url.py`); `UserAddressModel`'s primary-address invariant (first-is-primary, demote-on-set, promote-on-delete including the admin-formset-deletion edge case, DB constraint, cross-user isolation via the actual inline formset) and the `/api/account/addresses/` list/set-primary endpoints, including cross-user access attempts (`app_account/tests/models/test_user_address_rules.py`, `app_account/tests/api/test_user_address_api.py`); the country/state/city cross-field validation (`app_account/tests/models/test_user_address_form.py`); the address admin's rendered field order, standalone and inline (`app_account/tests/test_user_address_admin.py`); `UserWishlistModel`/`UserWishlistItemModel` — auto-creation on every user-creation path, one-wishlist-per-user, duplicate-product rejection (DB + form error message), `private` defaults to `False`, `position` append/reorg/gap-closing/cross-wishlist isolation, DB constraints (`app_account/tests/models/test_user_wishlist_rules.py`, `test_user_wishlist_item_rules.py`); the full `/api/account/wishlist/...` surface — own list (public+private), add (incl. duplicate/inactive rejection, ignoring any client-sent wishlist/user id), remove/toggle-privacy/move all scoped to the owner (404, not 403, for another user's item id, mirroring the address pattern), `check`, `share-link` (`app_account/tests/api/test_wishlist_item_api.py`); the public `/api/account/wishlist/public/{public_id}/` endpoint — works unauthenticated, only public items, response never contains a `private` key, bad/unknown id is 404, no cross-user leakage (`app_account/tests/api/test_public_wishlist_api.py`); the migration graph loads and matches model state (`app_account/tests/test_migrations.py`, written after the `NodeNotFoundError` incident — see `../memory/known_issues.md`). **Not covered**: `UserManagerModel` edge cases, every form except the auth/address/wishlist ones exercised via the API tests, `app_account/signals/create_default_superuser.py`, `app_account/management/commands/create_admin.py`, the wishlist admin inline formset. |
 | `app_address/` (label `address`) | Has its first tests of its own now (`app_address/tests/api/test_geo_filters.py`, added 2026-10-16: the country-filtered-states/state-filtered-cities endpoints, staff-only access). Everything else exercising `CityModel`/`StateModel`/`CountryModel` still does so indirectly through `app_account`'s address tests, including the new cross-field validation (`app_account/tests/models/test_user_address_form.py`). |
 | `app_core/` (label `core`) | **Zero tests.** `BaseModel`, `ContactForm`, `ContactSerializer`, `ContactViewSet`, `StableOrderingFilter`, `StandardPagination`, the health-check view — none tested. |
 | `app_product/` (label `product`) | Partial, concentrated on image ordering/upload paths (`app_product/tests/models/test_product_image_rules.py`, `test_upload_paths.py`) plus, added 2026-10-16: the admin field order (`app_product/tests/test_product_admin.py`) and the randomized default/explicit-override catalog ordering (`app_product/tests/api/test_product_randomized_ordering.py`). **Not covered**: `ProductCategoryModel`/`ProductModel` core logic beyond incidental factory use, `ProductForm`/`ProductCategoryForm`, `ProductFilterSet`, the list/category viewsets' other behavior (only ordering and the detail viewset are touched), most serializers. |
@@ -94,12 +94,33 @@ that for new test files rather than turning `globals` on.
   `ExpandableDescription.test.tsx`, `formatPrice.test.ts`,
   `productSort.test.ts`, `src/pages/ProductListPage.test.tsx` (ordering
   query-building only), and `src/i18n/detectInitialLanguage.test.ts`
-  (82 tests total now). Nothing else in the frontend has tests yet
-  (notably not `SignupPage.tsx` or `ContactPage.tsx`, despite one of them
-  also having a phone field, and no test touches `ProductDetailPage.tsx`
-  or `HomePage.tsx` as a whole, only their extracted pieces) — this is
-  still a start, not full coverage; don't assume other components/pages
-  are tested.
+  (82 tests total). Added 2026-10-16 (wishlist feature):
+  `src/pages/WishlistPage.test.tsx` (own list rendering, move/remove/
+  toggle-privacy interactions, the inert "Add to cart" button, copying
+  the share link), `src/pages/PublicWishlistPage.test.tsx` (404 for an
+  unknown id, empty state, no edit/delete/privacy controls, inert gift
+  button), `src/pages/ProductDetailPage.test.tsx` (the wishlist toggle
+  button's initial state, add/remove, guest-sees-a-login-link, a failed
+  request not producing a false visual state, and the button staying
+  disabled until the initial `check` call resolves — this is also the
+  project's first test of `ProductDetailPage.tsx` as a whole, previously
+  untested), and `src/components/layout/UserMenu.test.tsx` (new file —
+  `UserMenu.tsx` had no tests at all before; covers the wishlist/addresses
+  navigation and orders staying inert) (117 tests total now). Nothing else
+  in the frontend has tests yet (notably not `SignupPage.tsx` or
+  `ContactPage.tsx`, despite one of them also having a phone field, and no
+  test touches `HomePage.tsx` as a whole, only its extracted pieces) —
+  this is still a start, not full coverage; don't assume other
+  components/pages are tested.
+- **Testing a page whose component calls `useParams()`**
+  (`ProductDetailPage.tsx`, `PublicWishlistPage.tsx`):
+  `renderWithProviders` (`src/test/renderWithProviders.tsx`) takes an
+  optional `path` option (e.g. `path: "wishlist/:publicId"`) alongside
+  `route` — without it, `ui` renders directly inside the `MemoryRouter`
+  with no `<Route>` match, so `useParams()` always returns `{}` regardless
+  of `route`. Added 2026-10-16 when the first test for a param-based page
+  was written; reuse `path` for any future page under `App.tsx` that reads
+  a route param, rather than re-deriving this.
 - **Django Admin static JS (new 2026-10-16)**: `static/src/js/admin/*.js`
   (served by Django, no build step of its own) now has real automated
   coverage too, not just manual-step documentation — `src/admin-js/`

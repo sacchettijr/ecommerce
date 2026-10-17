@@ -39,19 +39,31 @@ hosted prototype). `PROJECT/settings/database.py` parses `DATABASE_URL`
   `CASCADE`): one wishlist per user, enforced by the field itself (unique
   index), no extra `save()` logic needed (unlike `UserAddressModel`, there
   is no "one flag among many rows" invariant to maintain here). Auto-created
-  by a `post_save` signal on `UserModel` — see `domain.md`.
+  by a `post_save` signal on `UserModel` — see `domain.md`. Also has
+  `public_id` (`UUIDField`, `default=uuid4`, `unique=True`, `editable=False`,
+  added 2026-10-16) — the opaque handle for the public "view a third
+  party's wishlist" URL; see `domain.md` for why this exists instead of the
+  numeric `user.id` or a new slug field, and why its migration needed a
+  hand-written 3-step backfill rather than a plain `AddField`.
 - `app_account.models.UserWishlistItemModel` — `wishlist` (FK, `CASCADE`,
   `related_name="items"`), `product` (FK, `CASCADE`), `added_at`
-  (`auto_now_add`), `position` (`PositiveIntegerField`, default `0`). Two
-  `UniqueConstraint`s: `unique_product_per_wishlist` (plain — a real user
-  error, surfaced as a clear form error) and `unique_position_per_wishlist`
+  (`auto_now_add`), `position` (`PositiveIntegerField`, default `0`),
+  `private` (`BooleanField`, default `False`, added 2026-10-16 — `False` =
+  visible on the public endpoint). Two `UniqueConstraint`s:
+  `unique_product_per_wishlist` (plain — a real user error, surfaced as a
+  clear form/serializer error) and `unique_position_per_wishlist`
   (`Deferrable.DEFERRED`, mirrors `ProductImageModel.order`). `save()` locks
   the parent wishlist (`select_for_update`), always appends new items at the
   end, and re-flows positions gap-free via `organize_wishlist_items()`
   (a per-app copy of `organize_product_images()`'s anchor-insert algorithm —
-  deliberately not shared across apps, per project convention). A
-  `post_delete` signal closes the gap after a deletion, mirroring
-  `app_product.signals.product_image`. See `domain.md`.
+  deliberately not shared across apps, per project convention) — but the
+  `move` up/down API action does **not** go through this; see `domain.md`
+  for why that algorithm doesn't correctly handle an in-place adjacent swap,
+  and what the `move` action does instead (a direct two-row position swap
+  under the same `select_for_update()` lock, relying on the constraint's
+  `DEFERRED` check). A `post_delete` signal closes the gap after a
+  deletion, mirroring `app_product.signals.product_image` — unchanged by
+  this feature. See `domain.md`.
 
 ## Migrations — confirmed risk
 

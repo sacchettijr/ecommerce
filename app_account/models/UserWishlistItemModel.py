@@ -37,6 +37,12 @@ class UserWishlistItemModel(BaseModel):
         ),
         default=0,
     )
+    private = models.BooleanField(
+        verbose_name=_(
+            message="Private",
+        ),
+        default=False,
+    )
 
     class Meta:
         db_table = "user_wishlist_item"

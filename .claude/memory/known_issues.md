@@ -104,9 +104,12 @@ needing further runtime verification.
     `PROJECT/settings/debug_toolbar.py`.
 12. **No shopping cart/checkout/order implementation exists anywhere** —
     backend and frontend both confirmed via repo-wide search. Frontend
-    cart/wishlist/orders UI elements are still inert placeholders
-    (profile/password-change/profile-edit/address-list are no longer in
-    this category — see `../context/project_state.md`).
+    cart/orders UI elements are still inert placeholders
+    (profile/password-change/profile-edit/address-list/wishlist are no
+    longer in this category — see `../context/project_state.md`). The
+    wishlist page's own "Add to cart" button and the public wishlist
+    page's "Give as a gift" button are also still inert, by explicit task
+    scope — see `../context/domain.md`'s Wishlist section.
 13. **No CI/automation exists** (no `.github/workflows/`, no `Makefile`,
     no pre-commit hooks). All checks are run by hand.
 14. ~~**Zero frontend test infrastructure.**~~ **Partially resolved
