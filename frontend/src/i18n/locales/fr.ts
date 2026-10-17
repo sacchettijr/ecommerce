@@ -278,7 +278,6 @@ export default {
         updateError:
             "Impossible de mettre à jour votre liste de souhaits. Veuillez réessayer.",
         itemRemoved: "Article retiré de votre liste de souhaits.",
-        privacyUpdated: "Confidentialité de l'article mise à jour avec succès.",
         addedOnLabel: (date: string) => `Ajouté le ${date}`,
         priorityLabel: (position: number) => `Priorité ${position}`,
         moveUpLabel: (name: string) => `Déplacer ${name} vers le haut`,

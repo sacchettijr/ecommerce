@@ -273,7 +273,6 @@ export default {
         loadError: "No se pudo cargar su lista de deseos. Inténtelo de nuevo.",
         updateError: "No se pudo actualizar su lista de deseos. Inténtelo de nuevo.",
         itemRemoved: "Artículo eliminado de su lista de deseos.",
-        privacyUpdated: "Privacidad del artículo actualizada correctamente.",
         addedOnLabel: (date: string) => `Añadido el ${date}`,
         priorityLabel: (position: number) => `Prioridad ${position}`,
         moveUpLabel: (name: string) => `Mover ${name} hacia arriba`,

@@ -298,14 +298,11 @@ export function WishlistPage() {
                                         )
                                     }
                                     onTogglePrivacy={() =>
-                                        void runAction(
-                                            item.id,
-                                            (signal) =>
-                                                toggleWishlistItemPrivacy(
-                                                    item.id,
-                                                    signal,
-                                                ),
-                                            t.wishlist.privacyUpdated,
+                                        void runAction(item.id, (signal) =>
+                                            toggleWishlistItemPrivacy(
+                                                item.id,
+                                                signal,
+                                            ),
                                         )
                                     }
                                     onRemove={() =>

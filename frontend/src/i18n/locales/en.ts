@@ -273,7 +273,6 @@ export default {
         loadError: "Could not load your wishlist. Please try again.",
         updateError: "Could not update your wishlist. Please try again.",
         itemRemoved: "Item removed from your wishlist.",
-        privacyUpdated: "Item privacy updated successfully.",
         addedOnLabel: (date: string) => `Added on ${date}`,
         priorityLabel: (position: number) => `Priority ${position}`,
         moveUpLabel: (name: string) => `Move ${name} up`,

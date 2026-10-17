@@ -256,7 +256,6 @@ export interface Translations {
         loadError: string;
         updateError: string;
         itemRemoved: string;
-        privacyUpdated: string;
         addedOnLabel: (date: string) => string;
         priorityLabel: (position: number) => string;
         moveUpLabel: (name: string) => string;

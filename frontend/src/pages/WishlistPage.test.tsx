@@ -153,6 +153,8 @@ describe("WishlistPage", () => {
 
         expect(mockedToggle).toHaveBeenCalledWith(1, expect.anything());
         expect(await screen.findByRole("button", { name: "Private" })).toBeInTheDocument();
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+        expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
 
     it("the Add to cart button is inert: no request, no navigation", async () => {
