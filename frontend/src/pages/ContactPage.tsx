@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import { isValidPhoneNumber } from "libphonenumber-js/min";
 
 import { ApiError } from "../api/client.ts";
 import { sendContact } from "../api/contact.ts";
 import type { ContactPayload } from "../api/types.ts";
 import { FormField } from "../components/ui/FormField.tsx";
+import { PhoneInput } from "../components/ui/PhoneInput.tsx";
 import { inputClassName } from "../components/ui/inputClassName.ts";
 import {
     EnvelopeIcon,
@@ -21,6 +23,7 @@ type FieldErrors = Partial<Record<Field, string>>;
 type Status = "idle" | "sending" | "success";
 
 const fields: Field[] = ["name", "email", "phone", "message"];
+const COOLDOWN_STORAGE_KEY = "contact_cooldown_until";
 
 const initialValues: ContactPayload = {
     name: "",
@@ -41,7 +44,7 @@ function validate(
     if (!/^\S+@\S+\.\S+$/.test(values.email.trim())) {
         errors.email = t.emailError;
     }
-    if (values.phone.replace(/\D/g, "").length < 10) {
+    if (!isValidPhoneNumber(values.phone)) {
         errors.phone = t.phoneError;
     }
     if (values.message.trim().length < 10) {
@@ -49,6 +52,29 @@ function validate(
     }
 
     return errors;
+}
+
+function readStoredCooldownSeconds(): number {
+    try {
+        const until = Number(localStorage.getItem(COOLDOWN_STORAGE_KEY));
+        const remaining = Math.ceil((until - Date.now()) / 1000);
+        return remaining > 0 ? remaining : 0;
+    } catch {
+        return 0;
+    }
+}
+
+function storeCooldownUntil(seconds: number): void {
+    try {
+        localStorage.setItem(
+            COOLDOWN_STORAGE_KEY,
+            String(Date.now() + seconds * 1000),
+        );
+    } catch {
+        // No persistence available (private mode, storage disabled, ...) — the countdown
+        // still works for this page load via in-memory state; it just won't survive a
+        // reload. The backend remains the real enforcement point regardless.
+    }
 }
 
 function serverErrors(data: unknown): FieldErrors {
@@ -78,6 +104,24 @@ export function ContactPage() {
     const [errors, setErrors] = useState<FieldErrors>({});
     const [formError, setFormError] = useState<string | null>(null);
     const [status, setStatus] = useState<Status>("idle");
+    // Seconds left in an active cooldown, or 0 when none is active. Seeded from
+    // localStorage on mount so a reload doesn't presume a prior block already ended —
+    // the backend is re-checked for real on the next actual submit attempt regardless.
+    const [cooldownSeconds, setCooldownSeconds] = useState(
+        readStoredCooldownSeconds,
+    );
+
+    useEffect(() => {
+        if (cooldownSeconds <= 0) {
+            return;
+        }
+
+        const interval = setInterval(() => {
+            setCooldownSeconds((current) => Math.max(0, current - 1));
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [cooldownSeconds]);
 
     const onChange = (
         event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -86,8 +130,16 @@ export function ContactPage() {
         setValues((current) => ({ ...current, [name]: value }));
     };
 
+    const onPhoneChange = (phone: string) => {
+        setValues((current) => ({ ...current, phone }));
+    };
+
     const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+
+        if (cooldownSeconds > 0) {
+            return;
+        }
 
         const clientErrors = validate(values, t.contact);
         setErrors(clientErrors);
@@ -110,7 +162,15 @@ export function ContactPage() {
             if (error instanceof ApiError && error.status === 400) {
                 setErrors(serverErrors(error.data));
             } else if (error instanceof ApiError && error.status === 429) {
-                setFormError(t.contact.rateLimitError);
+                const retryAfter = (error.data as { retry_after?: unknown } | null)
+                    ?.retry_after;
+
+                if (typeof retryAfter === "number" && retryAfter > 0) {
+                    storeCooldownUntil(retryAfter);
+                    setCooldownSeconds(retryAfter);
+                } else {
+                    setFormError(t.contact.rateLimitError);
+                }
             } else {
                 setFormError(t.contact.genericError);
             }
@@ -140,6 +200,15 @@ export function ContactPage() {
                                 className="mb-4 rounded-lg bg-red-50 p-4 text-red-800 ring-1 ring-red-200"
                             >
                                 {formError}
+                            </div>
+                        )}
+                        {cooldownSeconds > 0 && (
+                            <div
+                                role="alert"
+                                aria-live="polite"
+                                className="mb-4 rounded-lg bg-red-50 p-4 text-red-800 ring-1 ring-red-200"
+                            >
+                                {t.contact.rateLimitCountdown(cooldownSeconds)}
                             </div>
                         )}
 
@@ -190,29 +259,15 @@ export function ContactPage() {
                                 />
                             </FormField>
 
-                            <FormField
+                            <PhoneInput
                                 id="phone"
                                 label={t.contact.phoneLabel}
+                                countrySelectLabel={t.contact.phoneCountryLabel}
                                 required
+                                value={values.phone}
+                                onChange={onPhoneChange}
                                 error={errors.phone}
-                            >
-                                <input
-                                    id="phone"
-                                    name="phone"
-                                    type="tel"
-                                    autoComplete="tel"
-                                    placeholder={t.contact.phonePlaceholder}
-                                    value={values.phone}
-                                    onChange={onChange}
-                                    aria-invalid={errors.phone !== undefined}
-                                    aria-describedby={
-                                        errors.phone ? "phone-error" : undefined
-                                    }
-                                    className={inputClassName(
-                                        errors.phone !== undefined,
-                                    )}
-                                />
-                            </FormField>
+                            />
 
                             <FormField
                                 id="message"
@@ -240,7 +295,7 @@ export function ContactPage() {
 
                             <button
                                 type="submit"
-                                disabled={status === "sending"}
+                                disabled={status === "sending" || cooldownSeconds > 0}
                                 className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {status === "sending"

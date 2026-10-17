@@ -52,12 +52,14 @@ describe("ProfileEditPage", () => {
         expect(screen.getByLabelText(byLabel("Date of birth"))).toHaveValue(
             "1990-05-20",
         );
+        // The visible input shows the masked national display for the stored E.164 value,
+        // not the raw E.164 string itself.
         expect(screen.getByLabelText(byLabel("Phone"))).toHaveValue(
-            "+5511987654321",
+            "(11) 98765-4321",
         );
     });
 
-    it("ignores letters typed into the phone field, keeping digits and symbols", async () => {
+    it("ignores non-digit characters typed into the phone field, keeping only digits", async () => {
         const testUser = userEvent.setup();
 
         renderWithProviders(<ProfileEditPage />, {
@@ -101,10 +103,12 @@ describe("ProfileEditPage", () => {
             screen.getByRole("button", { name: "Update profile" }),
         );
 
+        // PhoneInput normalizes to E.164 itself (defaulting to BR, matching the backend's
+        // own PHONENUMBER_DEFAULT_REGION) before the value ever reaches form state.
         expect(mockedUpdateProfile).toHaveBeenCalledWith({
             name: "Jane Updated",
             date_birth: user.date_birth,
-            phone: "11987654321",
+            phone: "+5511987654321",
         });
         expect(
             await screen.findByText(
@@ -113,9 +117,9 @@ describe("ProfileEditPage", () => {
         ).toBeInTheDocument();
         // Refreshes the shared auth state so the navbar/profile home never show stale data.
         expect(setUser).toHaveBeenCalledWith(freshUser);
-        // Reflects the server-confirmed (normalized) values, not raw input.
+        // Reflects the server-confirmed (normalized) value, masked for display.
         expect(screen.getByLabelText(byLabel("Phone"))).toHaveValue(
-            "+5511987654321",
+            "(11) 98765-4321",
         );
     });
 

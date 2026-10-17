@@ -27,5 +27,14 @@ REST_FRAMEWORK = {
         "password_change": "10/hour",
         "token_check": "60/hour",
     },
+    #   Nginx is always the sole proxy in front of Django (local and in the one real
+    #   deployment — see nginx/nginx.conf), and it honestly sets
+    #   X-Forwarded-For $proxy_add_x_forwarded_for on every proxied location. Without this,
+    #   BaseThrottle.get_ident() falls back to REMOTE_ADDR, which behind nginx is nginx's
+    #   own container IP for every request — silently sharing every IP-based throttle
+    #   across all anonymous visitors. With NUM_PROXIES=1, get_ident() takes the *last*
+    #   entry of X-Forwarded-For (the one nginx itself appended), ignoring anything a
+    #   client might have pre-pended.
+    "NUM_PROXIES": 1,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }

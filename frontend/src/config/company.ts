@@ -1,8 +1,9 @@
 const phoneDigits = (value: string): string => value.replace(/\D/g, "");
 
-const phone: string = import.meta.env.VITE_COMPANY_PHONE ?? "(69) 99303-3993";
+const phone: string =
+    import.meta.env.VITE_COMPANY_PHONE ?? "+55 (69) 99303-3993";
 const whatsapp: string =
-    import.meta.env.VITE_COMPANY_WHATSAPP ?? "(69) 99303-3993";
+    import.meta.env.VITE_COMPANY_WHATSAPP ?? "+55 (69) 99303-3993";
 
 export const company = {
     name: "E-Commerce",

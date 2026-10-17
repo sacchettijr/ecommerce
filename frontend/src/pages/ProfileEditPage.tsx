@@ -1,14 +1,14 @@
-import type { ChangeEvent, FormEvent } from "react";
+import type { FormEvent } from "react";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 
 import { updateProfile } from "../api/auth.ts";
 import { AccountLayout } from "../components/account/AccountLayout.tsx";
 import { Alert } from "../components/ui/Alert.tsx";
+import { PhoneInput } from "../components/ui/PhoneInput.tsx";
 import { SubmitButton } from "../components/ui/SubmitButton.tsx";
 import { TextField } from "../components/ui/TextField.tsx";
 import { textLinkClassName } from "../components/ui/linkClassNames.ts";
-import { sanitizePhoneInput } from "../components/ui/sanitizePhoneInput.ts";
 import { useAuth } from "../context/useAuth.ts";
 import { useApiForm } from "../hooks/useApiForm.ts";
 import { useMessages } from "../hooks/useMessages.ts";
@@ -78,11 +78,8 @@ export function ProfileEditPage() {
         }
     };
 
-    const onPhoneChange = (event: ChangeEvent<HTMLInputElement>) => {
-        form.setValues((current) => ({
-            ...current,
-            phone: sanitizePhoneInput(event.target.value),
-        }));
+    const onPhoneChange = (phone: string) => {
+        form.setValues((current) => ({ ...current, phone }));
     };
 
     return (
@@ -116,12 +113,10 @@ export function ProfileEditPage() {
                         onChange={form.onChange}
                         error={form.fieldErrors.date_birth}
                     />
-                    <TextField
-                        name="phone"
-                        type="tel"
+                    <PhoneInput
+                        id="phone"
                         label={t.auth.phoneLabel}
-                        autoComplete="tel"
-                        placeholder={t.auth.phonePlaceholder}
+                        countrySelectLabel={t.auth.phoneCountryLabel}
                         value={form.values.phone}
                         onChange={onPhoneChange}
                         error={form.fieldErrors.phone}

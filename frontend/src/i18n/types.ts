@@ -82,12 +82,13 @@ export interface Translations {
         success: string;
         genericError: string;
         rateLimitError: string;
+        rateLimitCountdown: (seconds: number) => string;
         nameLabel: string;
         nameError: string;
         emailLabel: string;
         emailError: string;
         phoneLabel: string;
-        phonePlaceholder: string;
+        phoneCountryLabel: string;
         phoneError: string;
         messageLabel: string;
         messageError: string;
@@ -107,7 +108,7 @@ export interface Translations {
         nameLabel: string;
         dateBirthLabel: string;
         phoneLabel: string;
-        phonePlaceholder: string;
+        phoneCountryLabel: string;
         password1Label: string;
         password2Label: string;
         currentPasswordLabel: string;

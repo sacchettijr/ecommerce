@@ -7,9 +7,17 @@ interface DropdownProps {
     label: ReactNode;
     children: (close: () => void) => ReactNode;
     align?: "left" | "right";
+    // Defaults to the navbar's own dark-background styling (UserMenu/LanguagePicker, the
+    // original callers); pass an override for a Dropdown used on a light form background.
+    buttonClassName?: string;
 }
 
-export function Dropdown({ label, children, align = "left" }: DropdownProps) {
+export function Dropdown({
+    label,
+    children,
+    align = "left",
+    buttonClassName = "flex items-center gap-1 rounded px-3 py-2 text-gray-300 hover:text-white",
+}: DropdownProps) {
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -48,7 +56,7 @@ export function Dropdown({ label, children, align = "left" }: DropdownProps) {
                 aria-expanded={open}
                 aria-haspopup="menu"
                 onClick={() => setOpen((current) => !current)}
-                className="flex items-center gap-1 rounded px-3 py-2 text-gray-300 hover:text-white"
+                className={buttonClassName}
             >
                 {label}
                 <ChevronDownIcon

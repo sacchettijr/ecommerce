@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import type { FormEvent } from "react";
 import { Link } from "react-router";
 
 import { signup } from "../api/auth.ts";
@@ -7,13 +7,13 @@ import { withNext } from "../auth/authRoutes.ts";
 import { useNext } from "../auth/useNext.ts";
 import { AuthLayout } from "../components/auth/AuthLayout.tsx";
 import { ResendConfirmation } from "../components/auth/ResendConfirmation.tsx";
+import { PhoneInput } from "../components/ui/PhoneInput.tsx";
 import { SubmitButton } from "../components/ui/SubmitButton.tsx";
 import { TextField } from "../components/ui/TextField.tsx";
 import {
     buttonLinkClassName,
     textLinkClassName,
 } from "../components/ui/linkClassNames.ts";
-import { sanitizePhoneInput } from "../components/ui/sanitizePhoneInput.ts";
 import { useApiForm } from "../hooks/useApiForm.ts";
 import { useLanguage } from "../i18n/useLanguage.ts";
 
@@ -62,11 +62,8 @@ export function SignupPage() {
         }
     };
 
-    const onPhoneChange = (event: ChangeEvent<HTMLInputElement>) => {
-        form.setValues((current) => ({
-            ...current,
-            phone: sanitizePhoneInput(event.target.value),
-        }));
+    const onPhoneChange = (phone: string) => {
+        form.setValues((current) => ({ ...current, phone }));
     };
 
     return (
@@ -113,12 +110,10 @@ export function SignupPage() {
                     onChange={form.onChange}
                     error={form.fieldErrors.date_birth}
                 />
-                <TextField
-                    name="phone"
-                    type="tel"
+                <PhoneInput
+                    id="phone"
                     label={t.auth.phoneLabel}
-                    autoComplete="tel"
-                    placeholder={t.auth.phonePlaceholder}
+                    countrySelectLabel={t.auth.phoneCountryLabel}
                     value={form.values.phone}
                     onChange={onPhoneChange}
                     error={form.fieldErrors.phone}
