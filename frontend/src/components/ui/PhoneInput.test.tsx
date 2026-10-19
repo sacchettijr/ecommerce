@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { LanguageContext } from "../../i18n/LanguageContext.ts";
@@ -179,6 +179,47 @@ describe("PhoneInput", () => {
 
         expect(screen.getByLabelText("Phone")).toHaveValue("(202) 555-1234");
         expect(onChange).toHaveBeenLastCalledWith("+12025551234");
+    });
+
+    it("lets backspace right after the area code's ')' remove a digit, instead of doing nothing", async () => {
+        const user = userEvent.setup();
+        renderWithProviders(<Controlled />);
+
+        const input = screen.getByLabelText("Phone") as HTMLInputElement;
+        await user.type(input, "11987654321");
+        expect(input).toHaveValue("(11) 98765-4321");
+
+        // Caret right after the area code's closing ")" — previously, Backspace here just
+        // deleted that literal, which the mask immediately re-inserted, making deletion
+        // look like it did nothing.
+        input.setSelectionRange(4, 4);
+        fireEvent.keyDown(input, { key: "Backspace" });
+
+        expect(input).toHaveValue("(19) 87654-321");
+    });
+
+    it("lets backspace right after the US area code's ')' remove a digit, instead of doing nothing", async () => {
+        const user = userEvent.setup();
+        const onChange = vi.fn();
+        renderWithProviders(
+            <PhoneInput
+                id="phone"
+                label="Phone"
+                countrySelectLabel="Country code"
+                value=""
+                onChange={onChange}
+            />,
+        );
+
+        await selectCountry(user, /United States/);
+        const input = screen.getByLabelText("Phone") as HTMLInputElement;
+        await user.type(input, "2025551234");
+        expect(input).toHaveValue("(202) 555-1234");
+
+        input.setSelectionRange(5, 5);
+        fireEvent.keyDown(input, { key: "Backspace" });
+
+        expect(input).toHaveValue("(205) 551-234");
     });
 
     it("re-syncs from an externally-changed value prop", () => {

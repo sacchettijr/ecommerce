@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
 import {
     AsYouType,
     getCountryCallingCode,
@@ -70,6 +70,41 @@ function buildCountryOptions(language: string): CountryOption[] {
 
 function onlyDigits(value: string): string {
     return value.replace(/\D/g, "");
+}
+
+// Number of digit characters in `text` before `position`.
+function digitsBefore(text: string, position: number): number {
+    let count = 0;
+
+    for (let index = 0; index < position; index += 1) {
+        if (/\d/.test(text[index])) {
+            count += 1;
+        }
+    }
+
+    return count;
+}
+
+// The position right after the `count`-th digit in `text` (1-indexed), i.e. where the
+// caret should land once that many digits precede it.
+function positionAfterDigit(text: string, count: number): number {
+    if (count <= 0) {
+        return 0;
+    }
+
+    let seen = 0;
+
+    for (let index = 0; index < text.length; index += 1) {
+        if (/\d/.test(text[index])) {
+            seen += 1;
+
+            if (seen === count) {
+                return index + 1;
+            }
+        }
+    }
+
+    return text.length;
 }
 
 // Trims trailing digits until the number is no longer too long for `country` — using the
@@ -147,6 +182,8 @@ export function PhoneInput({
     );
     const [digits, setDigits] = useState(() => deriveFromValue(value).digits);
     const lastEmitted = useRef(value);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const pendingCaret = useRef<number | null>(null);
 
     useEffect(() => {
         if (value !== lastEmitted.current) {
@@ -160,6 +197,13 @@ export function PhoneInput({
     const options = useMemo(() => buildCountryOptions(language), [language]);
     const current = options.find((option) => option.code === country) ?? options[0];
     const { display } = format(country, digits);
+
+    useLayoutEffect(() => {
+        if (pendingCaret.current !== null) {
+            inputRef.current?.setSelectionRange(pendingCaret.current, pendingCaret.current);
+            pendingCaret.current = null;
+        }
+    }, [display]);
 
     const emit = (nextCountry: CountryCode, nextDigits: string) => {
         const { e164 } = format(nextCountry, nextDigits);
@@ -186,6 +230,52 @@ export function PhoneInput({
         }
 
         nextDigits = clampToMaxLength(country, nextDigits);
+
+        setDigits(nextDigits);
+        emit(country, nextDigits);
+    };
+
+    // Backspace/Delete right next to a mask literal (the ")" after a Brazilian/US area
+    // code, the "-" before the last block, etc.) would otherwise just remove that literal
+    // — the digits underneath are unchanged, so the mask immediately puts it right back,
+    // making deletion feel stuck right where a wrong area code needs fixing. Skip over the
+    // literal and remove the adjacent digit instead, in whichever direction the user is
+    // deleting.
+    const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+        if (event.key !== "Backspace" && event.key !== "Delete") {
+            return;
+        }
+
+        const target = event.currentTarget;
+        const { selectionStart, selectionEnd } = target;
+
+        if (selectionStart === null || selectionEnd === null || selectionStart !== selectionEnd) {
+            // A real selection (or an unsupported input type) deletes normally — the
+            // existing onChange digit-extraction already handles that correctly.
+            return;
+        }
+
+        const caret = selectionStart;
+        const removingBackward = event.key === "Backspace";
+        const charIndex = removingBackward ? caret - 1 : caret;
+
+        if (charIndex < 0 || charIndex >= display.length || /\d/.test(display[charIndex])) {
+            // Nothing there, or it's a real digit — let the default behavior run.
+            return;
+        }
+
+        const digitCountBeforeCaret = digitsBefore(display, caret);
+        const digitIndexToRemove = removingBackward ? digitCountBeforeCaret - 1 : digitCountBeforeCaret;
+
+        if (digitIndexToRemove < 0 || digitIndexToRemove >= digits.length) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const nextDigits = digits.slice(0, digitIndexToRemove) + digits.slice(digitIndexToRemove + 1);
+        const { display: nextDisplay } = format(country, nextDigits);
+        pendingCaret.current = positionAfterDigit(nextDisplay, digitIndexToRemove);
 
         setDigits(nextDigits);
         emit(country, nextDigits);
@@ -245,12 +335,14 @@ export function PhoneInput({
                     </Dropdown>
                 </div>
                 <input
+                    ref={inputRef}
                     id={id}
                     name={id}
                     type="tel"
                     autoComplete="tel-national"
                     value={display}
                     onChange={onDigitsChange}
+                    onKeyDown={onKeyDown}
                     required={required}
                     placeholder={placeholderFor(country)}
                     aria-invalid={error !== undefined}
