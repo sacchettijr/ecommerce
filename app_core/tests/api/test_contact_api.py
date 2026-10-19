@@ -53,6 +53,28 @@ def test_invalid_phone_is_rejected(client: Client) -> None:
     assert response.status_code == 400
 
 
+def test_a_single_word_name_is_rejected(client: Client) -> None:
+    response = client.post(
+        BASE,
+        data=payload(name="Maria"),
+        content_type="application/json",
+    )
+
+    body = response.json()
+    assert response.status_code == 400
+    assert body["name"]
+
+
+def test_a_full_name_with_first_and_last_name_is_accepted(client: Client) -> None:
+    response = client.post(
+        BASE,
+        data=payload(name="Maria Eduarda"),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 202
+
+
 def test_invalid_submission_does_not_consume_the_cooldown(client: Client) -> None:
     client.post(BASE, data=payload(phone="not-a-phone-number"), content_type="application/json")
 

@@ -16,6 +16,8 @@ LANGUAGES = (
     ("pt-br", "Português"),
     ("en", "English"),
     ("es", "Español"),
+    ("fr", "Français"),
+    ("it", "Italiano"),
 )
 
 LOCALE_PATHS = (BASE_DIR / "locale",)

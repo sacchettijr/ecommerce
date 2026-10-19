@@ -89,7 +89,7 @@ export default {
         rateLimitCountdown: (seconds: number) =>
             `Please wait ${seconds} seconds before sending another message.`,
         nameLabel: "Name",
-        nameError: "Name must be at least 3 characters long.",
+        nameError: "Enter your full name (first and last name).",
         emailLabel: "Email",
         emailError: "Enter a valid email address.",
         phoneLabel: "Phone",

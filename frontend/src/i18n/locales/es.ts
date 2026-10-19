@@ -90,7 +90,7 @@ export default {
         rateLimitCountdown: (seconds: number) =>
             `Espera ${seconds} segundos antes de enviar otro mensaje.`,
         nameLabel: "Nombre",
-        nameError: "El nombre debe tener al menos 3 caracteres.",
+        nameError: "Ingrese su nombre completo (nombre y apellido).",
         emailLabel: "Correo electrónico",
         emailError: "Ingresa un correo electrónico válido.",
         phoneLabel: "Teléfono",

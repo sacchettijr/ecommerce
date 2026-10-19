@@ -32,13 +32,24 @@ const initialValues: ContactPayload = {
     message: "",
 };
 
+// Mirrors the backend's validate_name (utils/validator.py): at least two
+// whitespace-separated parts that each contain a letter — a single word isn't a full name.
+function hasFullName(value: string): boolean {
+    const parts = value
+        .trim()
+        .split(/\s+/)
+        .filter((part) => /\p{L}/u.test(part));
+
+    return parts.length >= 2;
+}
+
 function validate(
     values: ContactPayload,
     t: Translations["contact"],
 ): FieldErrors {
     const errors: FieldErrors = {};
 
-    if (values.name.trim().length < 3) {
+    if (!hasFullName(values.name)) {
         errors.name = t.nameError;
     }
     if (!/^\S+@\S+\.\S+$/.test(values.email.trim())) {

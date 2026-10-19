@@ -90,6 +90,18 @@ def validate_name(
             ),
         )
 
+    #   A single word ("Maria") isn't accepted as a full name — at least a first and a
+    #   last name are required. A part with no letters at all (stray punctuation left
+    #   over from whitespace normalization) doesn't count toward the two required parts.
+    name_parts = [part for part in value.split() if any(character.isalpha() for character in part)]
+
+    if len(name_parts) < 2:
+        raise ValidationError(
+            message=_(
+                message="Enter your full name (first and last name).",
+            ),
+        )
+
 
 def validate_alpha(
     value: str,

@@ -15,3 +15,19 @@ msgstr "Esta cuenta ha sido desactivada."
 #: account/forms/LoginForm.py
 msgid "You haven't confirmed your email yet. Check your inbox to activate the account."
 msgstr "Aún no ha confirmado su correo. Revise su bandeja de entrada para activar la cuenta."
+
+#: account/forms/mixins/NormalizedNameFieldMixin.py
+msgid "The name must be 3 characters."
+msgstr "El nombre debe tener 3 caracteres."
+
+#: utils/validator.py
+msgid "The name cannot be empty."
+msgstr "El nombre no puede estar vacío."
+
+#: utils/validator.py
+msgid "The name must contain at least one letter."
+msgstr "El nombre debe contener al menos una letra."
+
+#: utils/validator.py
+msgid "Enter your full name (first and last name)."
+msgstr "Ingrese su nombre completo (nombre y apellido)."

@@ -6,6 +6,7 @@ from django.utils.translation import (
 )
 
 from utils.normalize import normalize_whitespace
+from utils.validator import validate_name
 
 
 class NormalizedNameFieldMixin:
@@ -22,5 +23,11 @@ class NormalizedNameFieldMixin:
                     message="The name must be 3 characters.",
                 ),
             )
+
+        #   Shared with the contact form (utils/validator.py) — also requires a first and
+        #   a last name, not just one word.
+        validate_name(
+            value=name,
+        )
 
         return name

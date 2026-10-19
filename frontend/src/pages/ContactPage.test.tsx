@@ -63,6 +63,39 @@ describe("ContactPage", () => {
         15000,
     );
 
+    it("rejects a single-word name client-side, requiring a full name", async () => {
+        const user = userEvent.setup();
+        renderWithProviders(<ContactPage />);
+
+        await user.type(screen.getByLabelText(/^Name/), "Maria");
+        await user.type(screen.getByLabelText(/^Email/), "jane@example.com");
+        await user.type(
+            screen.getByLabelText(/^Message/),
+            "Hello, I would like more information.",
+        );
+        await user.type(screen.getByLabelText(/^Phone/), "11987654321");
+        await user.click(screen.getByRole("button", { name: "Send" }));
+
+        expect(
+            await screen.findByText("Enter your full name (first and last name)."),
+        ).toBeInTheDocument();
+        expect(mockedSendContact).not.toHaveBeenCalled();
+    });
+
+    it("accepts a full name with first and last name", async () => {
+        const user = userEvent.setup();
+        mockedSendContact.mockResolvedValue(undefined);
+        renderWithProviders(<ContactPage />);
+
+        await fillValidFormExceptPhone(user);
+        await user.type(screen.getByLabelText(/^Phone/), "11987654321");
+        await user.click(screen.getByRole("button", { name: "Send" }));
+
+        expect(
+            await screen.findByText(/Message sent successfully/),
+        ).toBeInTheDocument();
+    });
+
     it("rejects an invalid phone number client-side using the library's own validity check", async () => {
         const user = userEvent.setup();
         renderWithProviders(<ContactPage />);

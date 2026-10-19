@@ -365,6 +365,21 @@ def test_signup_requires_the_mandatory_fields(client: Client) -> None:
         assert body[field]
 
 
+def test_signup_rejects_a_single_word_name(client: Client) -> None:
+    response = post(client, "signup", signup_data(name="Maria"))
+
+    body = response.json()
+    assert response.status_code == 400
+    assert body["name"]
+    assert not UserModel.objects.filter(email="maria@example.com").exists()
+
+
+def test_signup_accepts_a_full_name_with_more_than_two_parts(client: Client) -> None:
+    response = post(client, "signup", signup_data(name="Maria Eduarda da Silva"))
+
+    assert response.status_code == 201
+
+
 def test_signup_email_normalization_prevents_a_duplicate_with_other_casing(client: Client) -> None:
     make_user(email="dup@example.com")
 
@@ -856,7 +871,12 @@ def test_profile_update_success_updates_the_allowed_fields(client: Client) -> No
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    [("name", "Ab"), ("date_birth", ""), ("date_birth", "not-a-date")],
+    [
+        ("name", "Ab"),
+        ("name", "Maria"),
+        ("date_birth", ""),
+        ("date_birth", "not-a-date"),
+    ],
 )
 def test_profile_update_field_errors_for_invalid_values(
     client: Client, field: str, value: str

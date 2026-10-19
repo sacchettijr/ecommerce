@@ -6,8 +6,6 @@ export interface LanguageInfo {
     flag: string;
 }
 
-// PROJECT/settings/internationalization.py (LANGUAGES) só declara pt-br/en/es hoje —
-// fr/it existem só na interface React por enquanto (ver decisão em i18n/types.ts).
 export const LANGUAGES: LanguageInfo[] = [
     { code: "pt-br", nativeName: "Português", flag: "/img/locale/pt-br.png" },
     { code: "en", nativeName: "English", flag: "/img/locale/en.png" },
