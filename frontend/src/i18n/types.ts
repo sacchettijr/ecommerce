@@ -6,7 +6,6 @@ export interface Translations {
     nav: {
         home: string;
         category: string;
-        categories: string;
         noCategories: string;
         loadError: string;
         contact: string;

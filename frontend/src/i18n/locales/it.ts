@@ -8,7 +8,6 @@ export default {
     nav: {
         home: "Home",
         category: "Categoria",
-        categories: "Categorie",
         noCategories: "Nessuna categoria registrata",
         loadError: "Impossibile caricare",
         contact: "Contatto",

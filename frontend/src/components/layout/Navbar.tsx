@@ -97,9 +97,6 @@ export function Navbar() {
                             <Dropdown label={t.nav.category}>
                                 {(close) => (
                                     <>
-                                        <p className="px-4 py-2 text-xs font-semibold uppercase text-gray-500">
-                                            {t.nav.categories}
-                                        </p>
                                         {categories.map((category) => (
                                             <Link
                                                 key={category.id}
