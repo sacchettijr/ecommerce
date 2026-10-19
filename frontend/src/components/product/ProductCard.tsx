@@ -11,22 +11,32 @@ export function ProductCard({ product }: { product: Product }) {
     return (
         <div className="flex h-full flex-col overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-200">
             {product.thumbnail ? (
-                <div className="flex aspect-square w-full items-center justify-center overflow-hidden border-b border-gray-100 bg-white p-4">
+                <Link
+                    to={`/product/${product.slug}`}
+                    className="flex aspect-square w-full items-center justify-center overflow-hidden border-b border-gray-100 bg-white p-4"
+                >
                     <img
                         src={product.thumbnail}
                         alt={product.name}
                         loading="lazy"
                         className="max-h-full max-w-full object-contain"
                     />
-                </div>
+                </Link>
             ) : (
-                <div className="flex aspect-square w-full items-center justify-center bg-gray-100 text-sm text-gray-500">
+                <Link
+                    to={`/product/${product.slug}`}
+                    className="flex aspect-square w-full items-center justify-center bg-gray-100 text-sm text-gray-500"
+                >
                     {t.product.noImage}
-                </div>
+                </Link>
             )}
 
             <div className="flex flex-1 flex-col p-4">
-                <h3 className="text-lg font-semibold">{product.name}</h3>
+                <h3 className="text-lg font-semibold">
+                    <Link to={`/product/${product.slug}`} className="hover:underline">
+                        {product.name}
+                    </Link>
+                </h3>
                 <p className="mt-auto pt-3 font-bold">
                     {formatPrice(Number(product.price))}
                 </p>
