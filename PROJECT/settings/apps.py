@@ -25,4 +25,5 @@ INSTALLED_APPS = [
     "app_account",
     "app_product",
     "app_address",
+    "app_checkout",
 ]

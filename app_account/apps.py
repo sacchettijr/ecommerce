@@ -1,10 +1,10 @@
 from django.apps import AppConfig
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import (
+    gettext_lazy as _,
+)
 
 
-class AccountConfig(
-    AppConfig,
-):
+class AccountConfig(AppConfig):
     name = "app_account"
     label = "account"
     verbose_name = _(

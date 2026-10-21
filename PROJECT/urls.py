@@ -80,6 +80,13 @@ urlpatterns: list[URLPattern | URLResolver] = [
         ),
         name="url_address",
     ),
+    path(
+        route="api/checkout/",
+        view=include(
+            arg="app_checkout.urls",
+        ),
+        name="url_checkout",
+    ),
 ]
 
 
