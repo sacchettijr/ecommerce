@@ -333,24 +333,24 @@ export function ContactPage() {
                             </li>
                             <li className="flex gap-3">
                                 <PhoneIcon className="mt-0.5 size-5 shrink-0 text-blue-600" />
-                                <span>
-                                    <a
-                                        href={company.phoneHref}
-                                        className="hover:underline"
-                                    >
-                                        {company.phone}
-                                    </a>
-                                    <a
-                                        href={company.whatsappHref}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        title={t.footer.whatsapp}
-                                        className="ml-3 inline-flex items-center gap-1 text-green-700 hover:underline"
-                                    >
-                                        <WhatsAppIcon className="size-4" />
-                                        {t.footer.whatsapp}
-                                    </a>
-                                </span>
+                                <a
+                                    href={company.phoneHref}
+                                    className="hover:underline"
+                                >
+                                    {company.phone}
+                                </a>
+                            </li>
+                            <li className="flex gap-3">
+                                <WhatsAppIcon className="mt-0.5 size-5 shrink-0 text-green-700" />
+                                <a
+                                    href={company.whatsappHref}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={t.footer.whatsapp}
+                                    className="text-green-700 hover:underline"
+                                >
+                                    {t.footer.whatsapp}
+                                </a>
                             </li>
                             <li className="flex gap-3">
                                 <EnvelopeIcon className="mt-0.5 size-5 shrink-0 text-blue-600" />

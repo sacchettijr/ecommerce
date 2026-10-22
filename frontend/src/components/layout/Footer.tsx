@@ -27,31 +27,35 @@ export function Footer() {
                     <h6 className="mb-2 text-xs font-semibold uppercase text-gray-400">
                         {t.footer.contact}
                     </h6>
-                    <p className="mb-1 flex items-center gap-2 text-sm">
-                        <PhoneIcon className="size-4" />
-                        <a href={company.phoneHref} className={linkClassName}>
-                            {company.phone}
-                        </a>
-                        <a
-                            href={company.whatsappHref}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title={t.footer.whatsapp}
-                            className={`${linkClassName} ml-2 flex items-center gap-1`}
-                        >
+                    <div className="space-y-2">
+                        <p className="flex items-center gap-2 text-sm">
+                            <PhoneIcon className="size-4" />
+                            <a href={company.phoneHref} className={linkClassName}>
+                                {company.phone}
+                            </a>
+                        </p>
+                        <p className="flex items-center gap-2 text-sm">
                             <WhatsAppIcon className="size-4" />
-                            {t.footer.whatsapp}
-                        </a>
-                    </p>
-                    <p className="flex items-center gap-2 text-sm">
-                        <EnvelopeIcon className="size-4" />
-                        <a
-                            href={`mailto:${company.email}`}
-                            className={linkClassName}
-                        >
-                            {company.email}
-                        </a>
-                    </p>
+                            <a
+                                href={company.whatsappHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={t.footer.whatsapp}
+                                className={linkClassName}
+                            >
+                                {t.footer.whatsapp}
+                            </a>
+                        </p>
+                        <p className="flex items-center gap-2 text-sm">
+                            <EnvelopeIcon className="size-4" />
+                            <a
+                                href={`mailto:${company.email}`}
+                                className={linkClassName}
+                            >
+                                {company.email}
+                            </a>
+                        </p>
+                    </div>
                 </div>
 
                 <div className="md:text-right">
