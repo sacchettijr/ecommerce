@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { addToCart } from "../api/cart.ts";
 import { fetchProduct } from "../api/products.ts";
 import type { ProductDetail } from "../api/types.ts";
 import {
@@ -9,7 +10,7 @@ import {
     checkWishlistMembership,
     removeFromWishlistItem,
 } from "../api/wishlist.ts";
-import { makeSessionUser, makeWishlistItem } from "../test/fixtures.ts";
+import { makeCartSummary, makeSessionUser, makeWishlistItem } from "../test/fixtures.ts";
 import { renderWithProviders } from "../test/renderWithProviders.tsx";
 import { ProductDetailPage } from "./ProductDetailPage.tsx";
 
@@ -23,10 +24,18 @@ vi.mock("../api/wishlist.ts", () => ({
     removeFromWishlistItem: vi.fn(),
 }));
 
+vi.mock("../api/cart.ts", () => ({
+    fetchCart: vi.fn(),
+    addToCart: vi.fn(),
+    updateCartItemQuantity: vi.fn(),
+    removeCartItem: vi.fn(),
+}));
+
 const mockedFetchProduct = vi.mocked(fetchProduct);
 const mockedCheck = vi.mocked(checkWishlistMembership);
 const mockedAdd = vi.mocked(addToWishlist);
 const mockedRemove = vi.mocked(removeFromWishlistItem);
+const mockedAddToCart = vi.mocked(addToCart);
 
 function makeProductDetail(
     overrides: Partial<ProductDetail> = {},
@@ -48,6 +57,7 @@ beforeEach(() => {
     mockedCheck.mockReset();
     mockedAdd.mockReset();
     mockedRemove.mockReset();
+    mockedAddToCart.mockReset();
 });
 
 describe("ProductDetailPage wishlist button", () => {
@@ -70,7 +80,19 @@ describe("ProductDetailPage wishlist button", () => {
         const user = userEvent.setup();
         mockedFetchProduct.mockResolvedValue(makeProductDetail());
         mockedCheck.mockResolvedValue({ in_wishlist: false, item_id: null });
-        mockedAdd.mockResolvedValue([makeWishlistItem({ id: 5, product: { id: 10, name: "Blue Mug", slug: "blue-mug", price: "19.90", thumbnail: null } })]);
+        mockedAdd.mockResolvedValue([
+            makeWishlistItem({
+                id: 5,
+                product: {
+                    id: 10,
+                    name: "Blue Mug",
+                    slug: "blue-mug",
+                    price: "19.90",
+                    thumbnail: null,
+                    active: true,
+                },
+            }),
+        ]);
 
         renderWithProviders(<ProductDetailPage />, {
             user: makeSessionUser(),
@@ -164,5 +186,105 @@ describe("ProductDetailPage wishlist button", () => {
         resolveCheck({ in_wishlist: false, item_id: null });
         await waitFor(() => expect(button).not.toBeDisabled());
         expect(mockedCheck).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("ProductDetailPage add to cart", () => {
+    it("logged in: clicking add to cart adds the product and navigates to /cart", async () => {
+        const user = userEvent.setup();
+        mockedFetchProduct.mockResolvedValue(makeProductDetail());
+        mockedCheck.mockResolvedValue({ in_wishlist: false, item_id: null });
+        mockedAddToCart.mockResolvedValue(makeCartSummary());
+
+        renderWithProviders(<ProductDetailPage />, {
+            user: makeSessionUser(),
+            route: "/product/blue-mug",
+            path: "product/:slug",
+        });
+
+        const button = await screen.findByRole("button", { name: "Add to cart" });
+        await user.click(button);
+
+        expect(mockedAddToCart).toHaveBeenCalledWith(10);
+        // A successful add navigates away to /cart, which isn't a registered route in
+        // this test's router — the product page's own content disappears as a result.
+        await waitFor(() =>
+            expect(screen.queryByRole("heading", { name: "Blue Mug" })).not.toBeInTheDocument(),
+        );
+    });
+
+    it("logged out: clicking add to cart redirects to login with the resume intent", async () => {
+        const user = userEvent.setup();
+        mockedFetchProduct.mockResolvedValue(makeProductDetail());
+
+        renderWithProviders(<ProductDetailPage />, {
+            route: "/product/blue-mug",
+            path: "product/:slug",
+        });
+
+        const button = await screen.findByRole("button", { name: "Add to cart" });
+        await user.click(button);
+
+        expect(mockedAddToCart).not.toHaveBeenCalled();
+        // No /login route is registered in this test's router either, so the product
+        // page's content disappearing confirms a navigation away happened.
+        await waitFor(() =>
+            expect(screen.queryByRole("heading", { name: "Blue Mug" })).not.toBeInTheDocument(),
+        );
+    });
+
+    it("resumes a pending add-to-cart intent after landing back with ?addToCart=1", async () => {
+        mockedFetchProduct.mockResolvedValue(makeProductDetail());
+        mockedCheck.mockResolvedValue({ in_wishlist: false, item_id: null });
+        mockedAddToCart.mockResolvedValue(makeCartSummary());
+
+        renderWithProviders(<ProductDetailPage />, {
+            user: makeSessionUser(),
+            route: "/product/blue-mug?addToCart=1",
+            path: "product/:slug",
+        });
+
+        await waitFor(() => expect(mockedAddToCart).toHaveBeenCalledWith(10));
+        expect(mockedAddToCart).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not add again if the ?addToCart=1 flag is somehow still present on a re-render", async () => {
+        mockedFetchProduct.mockResolvedValue(makeProductDetail());
+        mockedCheck.mockResolvedValue({ in_wishlist: false, item_id: null });
+        mockedAddToCart.mockResolvedValue(makeCartSummary());
+
+        renderWithProviders(<ProductDetailPage />, {
+            user: makeSessionUser(),
+            route: "/product/blue-mug?addToCart=1",
+            path: "product/:slug",
+        });
+
+        await waitFor(() => expect(mockedAddToCart).toHaveBeenCalledTimes(1));
+        // Give any stray re-render a chance to fire the effect again.
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(mockedAddToCart).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows an error and does not navigate when the product became inactive meanwhile", async () => {
+        const user = userEvent.setup();
+        mockedFetchProduct.mockResolvedValue(makeProductDetail());
+        mockedCheck.mockResolvedValue({ in_wishlist: false, item_id: null });
+        mockedAddToCart.mockRejectedValue(new Error("inactive"));
+
+        renderWithProviders(<ProductDetailPage />, {
+            user: makeSessionUser(),
+            route: "/product/blue-mug",
+            path: "product/:slug",
+        });
+
+        const button = await screen.findByRole("button", { name: "Add to cart" });
+        await user.click(button);
+
+        expect(
+            await screen.findByText(
+                "Could not add this product to your cart. Please try again.",
+            ),
+        ).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Blue Mug" })).toBeInTheDocument();
     });
 });

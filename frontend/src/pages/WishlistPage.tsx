@@ -112,6 +112,14 @@ function WishlistItemRow({
                 <h3 className="font-semibold wrap-break-words">
                     {product.name}
                 </h3>
+                {/* Only ever present for staff — the backend already hides inactive
+                    items from non-staff owners entirely, so this field being false is
+                    never reachable for anyone else. */}
+                {!product.active && (
+                    <span className="inline-block rounded bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                        {t.wishlist.inactiveProductLabel}
+                    </span>
+                )}
                 <p className="font-bold">{formatPrice(Number(product.price))}</p>
                 <p className="text-sm text-gray-500">
                     {t.wishlist.addedOnLabel(

@@ -102,6 +102,19 @@ export function apiPost<T>(
     });
 }
 
+export function apiPatch<T>(
+    path: string,
+    body: unknown,
+    signal?: AbortSignal,
+): Promise<T> {
+    return request<T>(path, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal,
+    });
+}
+
 export function apiDelete<T>(path: string, signal?: AbortSignal): Promise<T> {
     return request<T>(path, { method: "DELETE", signal });
 }

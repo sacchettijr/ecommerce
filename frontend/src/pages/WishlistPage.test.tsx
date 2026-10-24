@@ -78,6 +78,7 @@ describe("WishlistPage", () => {
                     slug: "blue-mug",
                     price: "19.90",
                     thumbnail: null,
+                    active: true,
                 },
             }),
         ]);
@@ -169,6 +170,7 @@ describe("WishlistPage", () => {
                     slug: "expensive-thing",
                     price: "99.00",
                     thumbnail: null,
+                    active: true,
                 },
             }),
             makeWishlistItem({
@@ -180,6 +182,7 @@ describe("WishlistPage", () => {
                     slug: "cheap-thing",
                     price: "5.00",
                     thumbnail: null,
+                    active: true,
                 },
             }),
         ]);
@@ -260,5 +263,33 @@ describe("WishlistPage", () => {
         expect(
             await screen.findByText("Link copied to clipboard."),
         ).toBeInTheDocument();
+    });
+
+    it("shows the inactive-product label for an item whose product is inactive", async () => {
+        mockedFetch.mockResolvedValue([
+            makeWishlistItem({
+                product: {
+                    id: 10,
+                    name: "Blue Mug",
+                    slug: "blue-mug",
+                    price: "19.90",
+                    thumbnail: null,
+                    active: false,
+                },
+            }),
+        ]);
+
+        renderWithProviders(<WishlistPage />, { user: makeSessionUser() });
+
+        expect(await screen.findByText("Inactive product")).toBeInTheDocument();
+    });
+
+    it("does not show the inactive-product label for an active product", async () => {
+        mockedFetch.mockResolvedValue([makeWishlistItem()]);
+
+        renderWithProviders(<WishlistPage />, { user: makeSessionUser() });
+
+        await screen.findByText("Blue Mug");
+        expect(screen.queryByText("Inactive product")).not.toBeInTheDocument();
     });
 });

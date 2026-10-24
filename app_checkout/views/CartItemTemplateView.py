@@ -21,12 +21,10 @@ class CartItemTemplateView(TemplateView):
             extra=0,
         )
 
-        session_key = self.request.session.session_key
-
-        if session_key:
+        if self.request.user.is_authenticated:
             context["formset"] = CartItemFormSet(
                 queryset=CartItemModel.objects.filter(
-                    cart_key=session_key,
+                    user=self.request.user,
                 )
             )
         else:

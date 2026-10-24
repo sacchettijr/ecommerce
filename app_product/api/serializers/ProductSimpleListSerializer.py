@@ -19,4 +19,5 @@ class ProductSimpleListSerializer(BaseProductListSerializer):
             "slug",
             "price",
             "thumbnail",
+            "active",
         )

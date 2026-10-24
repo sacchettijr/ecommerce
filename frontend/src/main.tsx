@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router";
 
 import App from "./App.tsx";
 import { AuthProvider } from "./context/AuthProvider.tsx";
+import { CartProvider } from "./context/CartProvider.tsx";
 import { CategoriesProvider } from "./context/CategoriesProvider.tsx";
 import { LanguageProvider } from "./i18n/LanguageProvider.tsx";
 
@@ -14,9 +15,11 @@ createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
             <LanguageProvider>
                 <AuthProvider>
-                    <CategoriesProvider>
-                        <App />
-                    </CategoriesProvider>
+                    <CartProvider>
+                        <CategoriesProvider>
+                            <App />
+                        </CategoriesProvider>
+                    </CartProvider>
                 </AuthProvider>
             </LanguageProvider>
         </BrowserRouter>

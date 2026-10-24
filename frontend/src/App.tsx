@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router";
 import { ProtectedRoute } from "./auth/ProtectedRoute.tsx";
 import { Layout } from "./components/layout/Layout.tsx";
 import { AddressListPage } from "./pages/AddressListPage.tsx";
+import { CartPage } from "./pages/CartPage.tsx";
 import { ContactPage } from "./pages/ContactPage.tsx";
 import { EmailVerificationConfirmPage } from "./pages/EmailVerificationConfirmPage.tsx";
 import { HomePage } from "./pages/HomePage.tsx";
@@ -31,6 +32,14 @@ function App() {
                 <Route path="category/:slug" element={<ProductListPage />} />
                 <Route path="product/:slug" element={<ProductDetailPage />} />
                 <Route path="contact" element={<ContactPage />} />
+                <Route
+                    path="cart"
+                    element={
+                        <ProtectedRoute>
+                            <CartPage />
+                        </ProtectedRoute>
+                    }
+                />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="signup" element={<SignupPage />} />
                 <Route path="logged-out" element={<LoggedOutPage />} />

@@ -13,7 +13,7 @@ export interface Translations {
         search: string;
         toggleNav: string;
         login: string;
-        cart: string;
+        cart: (count: number) => string;
         logout: string;
         language: string;
     };
@@ -65,6 +65,7 @@ export interface Translations {
         addToCartLabel: string;
         addToWishlist: string;
         removeFromWishlist: string;
+        addToCartError: string;
         slideLabel: (position: number) => string;
         imageAlt: (name: string, position: number) => string;
     };
@@ -282,5 +283,26 @@ export interface Translations {
         publicEmptyState: string;
         notFoundTitle: string;
         notFoundText: string;
+        inactiveProductLabel: string;
+    };
+    cart: {
+        title: string;
+        heading: string;
+        emptyState: string;
+        browseProducts: string;
+        loadError: string;
+        updateError: string;
+        itemRemoved: string;
+        quantityLabel: (quantity: number) => string;
+        decreaseQuantityLabel: (name: string) => string;
+        increaseQuantityLabel: (name: string) => string;
+        removeItemLabel: string;
+        removeItemAccessibleLabel: (name: string) => string;
+        unitPriceLabel: string;
+        lineTotalLabel: string;
+        discountLabel: string;
+        totalLabel: string;
+        couponLabel: string;
+        couponButton: string;
     };
 }

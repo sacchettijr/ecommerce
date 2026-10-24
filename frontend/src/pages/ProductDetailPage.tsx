@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useParams } from "react-router";
+import { Link, useLocation, useParams, useSearchParams } from "react-router";
 
 import { ApiError } from "../api/client.ts";
 import { fetchProduct } from "../api/products.ts";
@@ -13,6 +13,7 @@ import { ExpandableDescription } from "../components/product/ExpandableDescripti
 import { ImageCarousel } from "../components/product/ImageCarousel.tsx";
 import { ProductBreadcrumb } from "../components/product/ProductBreadcrumb.tsx";
 import { ProductPrice } from "../components/product/ProductPrice.tsx";
+import { useAddToCart } from "../components/product/useAddToCart.ts";
 import { CartPlusIcon, HeartIcon } from "../components/ui/icons.tsx";
 import { useAuth } from "../context/useAuth.ts";
 import { useAsync } from "../hooks/useAsync.ts";
@@ -144,7 +145,35 @@ function WishlistToggleButton({ productId }: { productId: number }) {
 
 function ProductDetail({ slug }: { slug: string }) {
     const { t } = useLanguage();
+    const { user } = useAuth();
     const { data, error, loading } = useAsync(fetchProduct, slug);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const addToCart = useAddToCart({ id: data?.id ?? 0, slug });
+    const resumedRef = useRef(false);
+
+    // Resumes an add-to-cart intent carried through the login redirect
+    // (?addToCart=1, see useAddToCart.ts) — fires at most once, and strips the query
+    // param immediately so refreshing this page afterward never re-adds the product.
+    useEffect(() => {
+        if (
+            resumedRef.current ||
+            data === undefined ||
+            !user ||
+            searchParams.get("addToCart") !== "1"
+        ) {
+            return;
+        }
+
+        resumedRef.current = true;
+        setSearchParams(
+            (params) => {
+                params.delete("addToCart");
+                return params;
+            },
+            { replace: true },
+        );
+        addToCart.add();
+    }, [data, user, searchParams, setSearchParams, addToCart]);
 
     // Produto inexistente ou inativo: a API responde 404 e a página cai no 404 padrão.
     if (error instanceof ApiError && error.status === 404) {
@@ -198,14 +227,23 @@ function ProductDetail({ slug }: { slug: string }) {
 
                         <ProductPrice price={data.price} />
 
-                        <div className="mb-6 flex flex-wrap gap-3">
-                            <button
-                                type="button"
-                                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-lg font-medium text-white hover:bg-blue-700"
-                            >
-                                <CartPlusIcon className="size-5" />
-                                {t.product.addToCartLabel}
-                            </button>
+                        <div className="mb-6 flex flex-wrap items-start gap-3">
+                            <div>
+                                <button
+                                    type="button"
+                                    disabled={addToCart.pending}
+                                    onClick={addToCart.add}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-lg font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                                >
+                                    <CartPlusIcon className="size-5" />
+                                    {t.product.addToCartLabel}
+                                </button>
+                                {addToCart.error && (
+                                    <p role="alert" className="mt-1 text-sm text-red-600">
+                                        {t.product.addToCartError}
+                                    </p>
+                                )}
+                            </div>
                             <WishlistToggleButton productId={data.id} />
                         </div>
 

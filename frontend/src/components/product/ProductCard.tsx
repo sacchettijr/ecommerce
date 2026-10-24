@@ -4,9 +4,11 @@ import type { Product } from "../../api/types.ts";
 import { useLanguage } from "../../i18n/useLanguage.ts";
 import { CartPlusIcon } from "../ui/icons.tsx";
 import { formatPrice } from "./formatPrice.ts";
+import { useAddToCart } from "./useAddToCart.ts";
 
 export function ProductCard({ product }: { product: Product }) {
     const { t } = useLanguage();
+    const { add, pending } = useAddToCart(product);
 
     return (
         <div className="flex h-full flex-col overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-200">
@@ -49,9 +51,11 @@ export function ProductCard({ product }: { product: Product }) {
                     </Link>
                     <button
                         type="button"
+                        disabled={pending}
                         title={t.product.addToCart(product.name)}
                         aria-label={t.product.addToCart(product.name)}
-                        className="rounded-lg border border-blue-600 px-3 py-2 text-blue-600 hover:bg-blue-50"
+                        onClick={add}
+                        className="rounded-lg border border-blue-600 px-3 py-2 text-blue-600 hover:bg-blue-50 disabled:opacity-50"
                     >
                         <CartPlusIcon className="size-5" />
                     </button>

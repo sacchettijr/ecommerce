@@ -1,4 +1,6 @@
 import type {
+    CartItem,
+    CartSummary,
     Product,
     PublicWishlistItem,
     SessionUser,
@@ -13,6 +15,28 @@ export function makeProduct(overrides: Partial<Product> = {}): Product {
         slug: "blue-mug",
         price: "19.90",
         thumbnail: null,
+        active: true,
+        ...overrides,
+    };
+}
+
+export function makeCartItem(overrides: Partial<CartItem> = {}): CartItem {
+    return {
+        id: 1,
+        product: makeProduct(),
+        quantity: 1,
+        unit_price: "19.90",
+        line_total: "19.90",
+        ...overrides,
+    };
+}
+
+export function makeCartSummary(overrides: Partial<CartSummary> = {}): CartSummary {
+    return {
+        items: [],
+        subtotal: "0.00",
+        discount_total: "0.00",
+        total: "0.00",
         ...overrides,
     };
 }

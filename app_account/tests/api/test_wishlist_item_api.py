@@ -471,3 +471,61 @@ def test_share_link_returns_the_callers_own_public_id(client: Client) -> None:
     body = response.json()
     assert response.status_code == 200
     assert body["public_id"] == public_id_of(user)
+
+
+# ---------------------------------------------------------- inactive products
+
+
+def test_a_deactivated_products_item_is_hidden_from_a_non_staff_owner(client: Client) -> None:
+    user = make_user()
+    item = add(user)
+    product = item.product
+    product.active = False
+    product.save(update_fields=["active"])
+    client.force_login(user)
+
+    response = client.get(f"{BASE}/")
+
+    assert ids(response.json()) == []
+
+
+def test_a_deactivated_products_item_stays_stored_not_deleted(client: Client) -> None:
+    user = make_user()
+    item = add(user)
+    product = item.product
+    product.active = False
+    product.save(update_fields=["active"])
+
+    assert UserWishlistItemModel.objects.filter(pk=item.pk).exists()
+
+
+def test_a_staff_owner_sees_the_deactivated_item_with_the_inactive_flag(
+    client: Client,
+) -> None:
+    user = cast(UserModel, UserFactory(is_staff=True))
+    item = add(user)
+    product = item.product
+    product.active = False
+    product.save(update_fields=["active"])
+    client.force_login(user)
+
+    response = client.get(f"{BASE}/")
+
+    body = response.json()
+    assert ids(body) == [item.pk]
+    assert body[0]["product"]["active"] is False
+
+
+def test_hiding_a_deactivated_item_preserves_the_remaining_items_order(client: Client) -> None:
+    user = make_user()
+    first = add(user)
+    second = add(user)
+    third = add(user)
+    product = second.product
+    product.active = False
+    product.save(update_fields=["active"])
+    client.force_login(user)
+
+    response = client.get(f"{BASE}/")
+
+    assert ids(response.json()) == [first.pk, third.pk]

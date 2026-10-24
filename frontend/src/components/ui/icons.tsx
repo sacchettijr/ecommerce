@@ -158,6 +158,10 @@ export function PlusIcon(props: SVGProps<SVGSVGElement>) {
     return <Icon shapes="M12 4.5v15m7.5-7.5h-15" {...props} />;
 }
 
+export function MinusIcon(props: SVGProps<SVGSVGElement>) {
+    return <Icon shapes="M19.5 12h-15" {...props} />;
+}
+
 export function ShieldCheckIcon(props: SVGProps<SVGSVGElement>) {
     return (
         <Icon

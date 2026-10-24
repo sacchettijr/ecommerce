@@ -10,6 +10,7 @@ import {
 
 import { isAuthPath, withNext } from "../../auth/authRoutes.ts";
 import { useAuth } from "../../context/useAuth.ts";
+import { useCart } from "../../context/useCart.ts";
 import { useCategories } from "../../context/useCategories.ts";
 import { useLanguage } from "../../i18n/useLanguage.ts";
 import { Dropdown } from "../ui/Dropdown.tsx";
@@ -30,6 +31,7 @@ export function Navbar() {
     const [searchParams] = useSearchParams();
     const currentSearch = searchParams.get("q") ?? "";
     const { user } = useAuth();
+    const { cart } = useCart();
     const location = useLocation();
     // Voltar para a página atual depois de entrar (exceto nas próprias páginas de autenticação).
     const loginNext = isAuthPath(location.pathname)
@@ -178,12 +180,13 @@ export function Navbar() {
                             )}
                         </li>
                         <li>
-                            <a
-                                href="#"
+                            <Link
+                                to="/cart"
+                                onClick={closeMenu}
                                 className="block rounded px-3 py-2 text-gray-300 hover:text-white"
                             >
-                                {t.nav.cart}
-                            </a>
+                                {t.nav.cart(cart?.items.length ?? 0)}
+                            </Link>
                         </li>
                     </ul>
                 </div>

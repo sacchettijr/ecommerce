@@ -3,8 +3,16 @@ from typing import Any, cast
 import pytest
 from django.test import Client
 
-from app_account.models import UserModel, UserWishlistModel
-from app_account.tests.factories import UserFactory, UserWishlistItemFactory
+from app_account.models import (
+    UserModel,
+    UserWishlistItemModel,
+    UserWishlistModel,
+)
+from app_account.tests.factories import (
+    UserFactory,
+    UserWishlistItemFactory,
+)
+from app_product.models import ProductModel
 from app_product.tests.factories import ProductFactory
 
 pytestmark = pytest.mark.django_db
@@ -16,37 +24,66 @@ def make_user() -> UserModel:
     return cast(UserModel, UserFactory())
 
 
-def wishlist_of(user: UserModel) -> UserWishlistModel:
-    return UserWishlistModel.objects.get(user=user)
+def wishlist_of(
+    user: UserModel,
+) -> UserWishlistModel:
+    return UserWishlistModel.objects.get(
+        user=user,
+    )
 
 
-def public_id_of(user: UserModel) -> str:
+def public_id_of(
+    user: UserModel,
+) -> str:
     return str(cast(Any, wishlist_of(user)).public_id)
 
 
-def add(user: UserModel, **kwargs: Any) -> None:
-    UserWishlistItemFactory(wishlist=wishlist_of(user), product=ProductFactory(), **kwargs)
+def add(
+    user: UserModel,
+    **kwargs: Any,
+) -> None:
+    UserWishlistItemFactory(
+        wishlist=wishlist_of(user),
+        product=ProductFactory(),
+        **kwargs,
+    )
 
 
-def ids(response_json: dict[str, Any]) -> list[int]:
+def ids(
+    response_json: dict[str, Any],
+) -> list[int]:
     return [row["id"] for row in response_json["items"]]
 
 
-def test_public_wishlist_works_without_authentication(client: Client) -> None:
+def test_public_wishlist_works_without_authentication(
+    client: Client,
+) -> None:
     user = make_user()
     add(user, private=False)
 
-    response = client.get(f"{BASE}/{public_id_of(user)}/")
+    response = client.get(
+        path=f"{BASE}/{public_id_of(user)}/",
+    )
 
     assert response.status_code == 200
 
 
-def test_public_wishlist_returns_only_public_items(client: Client) -> None:
+def test_public_wishlist_returns_only_public_items(
+    client: Client,
+) -> None:
     user = make_user()
-    add(user, private=False)
-    add(user, private=True)
+    add(
+        user,
+        private=False,
+    )
+    add(
+        user,
+        private=True,
+    )
 
-    response = client.get(f"{BASE}/{public_id_of(user)}/")
+    response = client.get(
+        path=f"{BASE}/{public_id_of(user)}/",
+    )
 
     body = response.json()
     assert len(body["items"]) == 1
@@ -54,12 +91,16 @@ def test_public_wishlist_returns_only_public_items(client: Client) -> None:
         assert row.get("private") is None
 
 
-def test_public_wishlist_response_never_contains_a_private_key(client: Client) -> None:
+def test_public_wishlist_response_never_contains_a_private_key(
+    client: Client,
+) -> None:
     user = make_user()
     add(user, private=False)
     add(user, private=True)
 
-    response = client.get(f"{BASE}/{public_id_of(user)}/")
+    response = client.get(
+        path=f"{BASE}/{public_id_of(user)}/",
+    )
 
     for row in response.json()["items"]:
         assert "private" not in row
@@ -69,7 +110,9 @@ def test_public_wishlist_includes_the_nested_product(client: Client) -> None:
     user = make_user()
     add(user, private=False)
 
-    response = client.get(f"{BASE}/{public_id_of(user)}/")
+    response = client.get(
+        path=f"{BASE}/{public_id_of(user)}/",
+    )
 
     row = response.json()["items"][0]
     assert row["product"]["id"]
@@ -81,19 +124,25 @@ def test_public_wishlist_with_only_private_items_is_an_empty_list(client: Client
     user = make_user()
     add(user, private=True)
 
-    response = client.get(f"{BASE}/{public_id_of(user)}/")
+    response = client.get(
+        path=f"{BASE}/{public_id_of(user)}/",
+    )
 
     assert response.json()["items"] == []
 
 
 def test_unknown_public_id_is_not_found(client: Client) -> None:
-    response = client.get(f"{BASE}/00000000-0000-0000-0000-000000000000/")
+    response = client.get(
+        path=f"{BASE}/00000000-0000-0000-0000-000000000000/",
+    )
 
     assert response.status_code == 404
 
 
 def test_malformed_public_id_is_not_found(client: Client) -> None:
-    response = client.get(f"{BASE}/not-a-uuid/")
+    response = client.get(
+        path=f"{BASE}/not-a-uuid/",
+    )
 
     assert response.status_code == 404
 
@@ -103,6 +152,110 @@ def test_one_users_items_never_appear_under_another_users_public_id(client: Clie
     other = make_user()
     add(other, private=False)
 
-    response = client.get(f"{BASE}/{public_id_of(user)}/")
+    response = client.get(
+        path=f"{BASE}/{public_id_of(user)}/",
+    )
 
     assert response.json()["items"] == []
+
+
+# ---------------------------------------------------------- inactive products
+
+
+def test_a_deactivated_products_item_is_hidden_from_a_non_staff_viewer(client: Client) -> None:
+    user = make_user()
+    product = cast(ProductModel, ProductFactory())
+    item = cast(
+        UserWishlistItemModel,
+        UserWishlistItemFactory(
+            wishlist=wishlist_of(user),
+            product=product,
+            private=False,
+        ),
+    )
+    product.active = False
+    product.save(update_fields=["active"])
+
+    response = client.get(
+        path=f"{BASE}/{public_id_of(user)}/",
+    )
+
+    assert ids(response.json()) == []
+    #   Still stored, just hidden from this (non-staff) viewer.
+    assert UserWishlistItemModel.objects.filter(
+        pk=item.pk,
+    ).exists()
+
+
+def test_a_staff_viewer_sees_the_deactivated_item_with_the_inactive_flag(
+    client: Client,
+) -> None:
+    user = make_user()
+    staff = cast(
+        UserModel,
+        UserFactory(
+            is_staff=True,
+        ),
+    )
+    product = cast(ProductModel, ProductFactory())
+    item = cast(
+        UserWishlistItemModel,
+        UserWishlistItemFactory(
+            wishlist=wishlist_of(user),
+            product=product,
+            private=False,
+        ),
+    )
+    product.active = False
+    product.save(update_fields=["active"])
+    client.force_login(
+        user=staff,
+    )
+
+    response = client.get(
+        path=f"{BASE}/{public_id_of(user)}/",
+    )
+
+    body = response.json()
+    assert ids(response_json=body) == [item.pk]
+    assert body["items"][0]["product"]["active"] is False
+
+
+def test_hiding_a_deactivated_item_preserves_the_remaining_items_order(client: Client) -> None:
+    user = make_user()
+    first = cast(
+        UserWishlistItemModel,
+        UserWishlistItemFactory(
+            wishlist=wishlist_of(user),
+            product=ProductFactory(),
+            private=False,
+        ),
+    )
+    deactivated_product = cast(ProductModel, ProductFactory())
+    UserWishlistItemFactory(
+        wishlist=wishlist_of(user),
+        product=deactivated_product,
+        private=False,
+    )
+    third = cast(
+        UserWishlistItemModel,
+        UserWishlistItemFactory(
+            wishlist=wishlist_of(user),
+            product=ProductFactory(),
+            private=False,
+        ),
+    )
+    deactivated_product.active = False
+    deactivated_product.save(
+        update_fields=[
+            "active",
+        ],
+    )
+
+    response = client.get(
+        path=f"{BASE}/{public_id_of(user)}/",
+    )
+
+    assert ids(
+        response_json=response.json(),
+    ) == [first.pk, third.pk]

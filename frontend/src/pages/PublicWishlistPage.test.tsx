@@ -69,6 +69,7 @@ describe("PublicWishlistPage", () => {
                         slug: "blue-mug",
                         price: "19.90",
                         thumbnail: null,
+                        active: true,
                     },
                 }),
             ],
@@ -110,6 +111,7 @@ describe("PublicWishlistPage", () => {
                         slug: "zebra-mug",
                         price: "19.90",
                         thumbnail: null,
+                        active: true,
                     },
                 }),
                 makePublicWishlistItem({
@@ -121,6 +123,7 @@ describe("PublicWishlistPage", () => {
                         slug: "apple-mug",
                         price: "9.90",
                         thumbnail: null,
+                        active: true,
                     },
                 }),
             ],
@@ -211,5 +214,45 @@ describe("PublicWishlistPage", () => {
             await screen.findByRole("button", { name: "Give as a gift" }),
         ).toBeInTheDocument();
         expect(mockedMyWishlist).not.toHaveBeenCalled();
+    });
+
+    it("shows the inactive-product label for an item whose product is inactive", async () => {
+        mockedFetch.mockResolvedValue({
+            public_id: "abc",
+            items: [
+                makePublicWishlistItem({
+                    product: {
+                        id: 10,
+                        name: "Blue Mug",
+                        slug: "blue-mug",
+                        price: "19.90",
+                        thumbnail: null,
+                        active: false,
+                    },
+                }),
+            ],
+        });
+
+        renderWithProviders(<PublicWishlistPage />, {
+            route: "/wishlist/abc",
+            path: "wishlist/:publicId",
+        });
+
+        expect(await screen.findByText("Inactive product")).toBeInTheDocument();
+    });
+
+    it("does not show the inactive-product label for an active product", async () => {
+        mockedFetch.mockResolvedValue({
+            public_id: "abc",
+            items: [makePublicWishlistItem()],
+        });
+
+        renderWithProviders(<PublicWishlistPage />, {
+            route: "/wishlist/abc",
+            path: "wishlist/:publicId",
+        });
+
+        await screen.findByText("Blue Mug");
+        expect(screen.queryByText("Inactive product")).not.toBeInTheDocument();
     });
 });

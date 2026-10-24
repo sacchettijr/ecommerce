@@ -13,6 +13,7 @@ export interface Product {
     slug: string;
     price: string;
     thumbnail: string | null;
+    active: boolean;
 }
 
 export interface ProductCategory {
@@ -89,6 +90,21 @@ export interface PublicWishlistItem {
 export interface PublicWishlist {
     public_id: string;
     items: PublicWishlistItem[];
+}
+
+export interface CartItem {
+    id: number;
+    product: Product;
+    quantity: number;
+    unit_price: string;
+    line_total: string;
+}
+
+export interface CartSummary {
+    items: CartItem[];
+    subtotal: string;
+    discount_total: string;
+    total: string;
 }
 
 export interface SessionUser {

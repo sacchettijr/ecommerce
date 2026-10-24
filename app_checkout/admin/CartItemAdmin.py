@@ -18,16 +18,19 @@ else:
 class CartItemAdmin(BaseCartItemAdmin):
     list_display = (
         "id",
-        "cart_key",
+        "user",
         "product",
         "quantity",
         "price",
     )
     list_display_links = (
         "id",
-        "cart_key",
+        "user",
     )
-    list_filter = ("cart_key",)
-    search_fields = ("cart_key",)
+    list_filter = ("user",)
+    search_fields = (
+        "user__email",
+        "user__name",
+    )
     add_form = CartItemCreateForm
     form = CartItemUpdateForm

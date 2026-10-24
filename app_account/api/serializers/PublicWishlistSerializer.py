@@ -1,8 +1,15 @@
-from typing import TYPE_CHECKING, Any, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    cast,
+)
 
 from rest_framework import serializers
 
-from app_account.models import UserWishlistItemModel, UserWishlistModel
+from app_account.models import (
+    UserWishlistItemModel,
+    UserWishlistModel,
+)
 
 from .PublicWishlistItemSerializer import PublicWishlistItemSerializer
 
@@ -13,8 +20,6 @@ else:
 
 
 class PublicWishlistSerializer(BasePublicWishlistSerializer):
-    """Read shape for a third party's wishlist, looked up by its opaque public_id."""
-
     items = serializers.SerializerMethodField()
 
     class Meta:
@@ -26,11 +31,27 @@ class PublicWishlistSerializer(BasePublicWishlistSerializer):
         read_only_fields = fields
 
     def get_items(self, wishlist: UserWishlistModel) -> list[dict[str, Any]]:
+        request = self.context.get("request")
+        viewer_is_staff = bool(
+            request is not None and request.user.is_staff,
+        )
+
         public_items = UserWishlistItemModel.objects.filter(
             wishlist=wishlist,
             private=False,
-        ).select_related("product")
+        ).select_related(
+            "product",
+        )
+
+        if not viewer_is_staff:
+            public_items = public_items.exclude(
+                product__active=False,
+            )
+
         return cast(
             list[dict[str, Any]],
-            PublicWishlistItemSerializer(public_items, many=True).data,
+            PublicWishlistItemSerializer(
+                instance=public_items,
+                many=True,
+            ).data,
         )
