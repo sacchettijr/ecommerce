@@ -161,16 +161,97 @@ Render today, by explicit documented tradeoff, not by accident.
   point in the same event handler). `components/ui/Alert.tsx` supports an
   optional `onDismiss`/`dismissLabel` pair (discriminated union: both or
   neither) for the dismiss button these render with.
-- **Phone input filters out letters as the user types.**
-  `frontend/src/components/ui/sanitizePhoneInput.ts` (`value.replace(/\p{L}/gu, "")`)
-  strips any Unicode letter, keeping digits/spaces/`+`/`-`/parentheses
-  untouched; `SignupPage.tsx` and `ProfileEditPage.tsx` both wire it into
-  their phone field via a dedicated `onChange` handler (calling
-  `form.setValues` directly) instead of the generic `form.onChange` other
-  fields use. `ContactPage.tsx` also has a phone field but was
-  deliberately left out of this — not asked for, and out of scope. The
-  backend's `PhoneNumberField`/validators remain the real format
-  authority; this is purely a typing-experience filter.
+- **Phone input has a country/DDI selector and a dynamic per-country mask**
+  (added 2026-10-17, replacing the old letter-stripping-only
+  `sanitizePhoneInput.ts`, now deleted). `frontend/src/components/ui/PhoneInput.tsx`
+  is shared by `SignupPage.tsx`, `ProfileEditPage.tsx`, and `ContactPage.tsx`
+  — all three previously had independent, inconsistent phone handling
+  (Contact didn't even sanitize). Built on `libphonenumber-js/min` (the JS
+  port of the same canonical metadata `django-phonenumber-field`/
+  `phonenumbers` already uses server-side) rather than a prebuilt UI
+  widget, keeping with this project's hand-rolled-input convention
+  (`TextField`/`FormField`). Internally tracks `country`/national-digits
+  as its own state (seeded from the incoming E.164 `value`, defaulting to
+  `"BR"` when empty — matching the backend's `PHONENUMBER_DEFAULT_REGION`
+  default); the displayed mask comes from `AsYouType(country).input(digits)`,
+  and the value emitted to the parent is that same formatter's
+  `.getNumber()?.number` (falling back to a plain concatenation while
+  there aren't yet enough digits). Country names use `Intl.DisplayNames`
+  keyed to the current UI language — no static country-name list to
+  maintain. The backend's `PhoneNumberField`/validators remain the real
+  format authority regardless of this frontend formatting.
+- **The country selector only offers the countries this site currently
+  serves** (updated 2026-10-17, same day as the above, per direct user
+  feedback): a fixed `SUPPORTED_COUNTRIES = ["BR", "US", "FR", "IT"]` in
+  `PhoneInput.tsx`, not the full ITU list `getCountries()` would return —
+  display names are still derived via `Intl.DisplayNames`, just restricted
+  to these four codes. If an existing stored `value` ever parses to a
+  country outside this set, the component falls back to `"BR"`.
+  **Per-country max length is enforced while typing** via
+  `libphonenumber-js/min`'s own `validatePhoneNumberLength(digits,
+  country)` (trimming trailing digits until it stops returning
+  `"TOO_LONG"`) — not a hand-maintained max-digits table, so it stays
+  correct even for a country like Italy whose national numbers vary in
+  length by type. Confirmed one pre-existing, out-of-scope cosmetic quirk
+  while verifying this: France's `AsYouType` mask only groups into
+  "XX XX XX XX XX" when fed a leading national trunk `0`, which this
+  component doesn't add — so the French display shows ungrouped digits
+  (still a correct, valid number) rather than a spaced mask. Not fixed,
+  since it wasn't reported; flagged for a future task if wanted.
+- **The country picker is a flag-only `Dropdown`, not a native `<select>`**
+  (changed 2026-10-17, later the same day, per direct user feedback — a
+  native `<select>`'s own collapsed display can only ever show its
+  selected `<option>`'s plain text, never an `<img>`, so showing just a
+  flag instead of the full country name requires a custom trigger).
+  Mirrors `LanguagePicker.tsx` exactly: a button showing just the current
+  country's flag (`<img alt="Country code: <name> (+<code>)">`, so the
+  accessible name still carries the full context even though only the
+  flag is visible), opening a menu of the 4 supported countries with
+  flag + name + calling code each. Reuses the **exact same flag image
+  files** the language switcher already ships
+  (`frontend/src/i18n/languages.ts`'s `/img/locale/*.png`) via a small
+  `COUNTRY_FLAGS` map in `PhoneInput.tsx` — `BR→pt-br.png`, `US→en.png`,
+  `FR→fr.png`, `IT→it.png` — not a second flag asset set and not emoji
+  (flag emoji render as plain two-letter codes on some platforms,
+  notably Windows, which was the reason emoji were dropped). Required
+  one small, backward-compatible change to the shared `Dropdown.tsx`:
+  a new optional `buttonClassName` prop (defaulting to the exact
+  hardcoded classes `UserMenu.tsx`/`LanguagePicker.tsx` already relied
+  on, so neither needed to change) — `PhoneInput.tsx` passes a
+  light-background-appropriate className instead, since `Dropdown`'s
+  default styling (`text-gray-300`/`hover:text-white`) assumes the
+  navbar's dark background and would be nearly invisible on a form.
+  **Selecting a country now always clears the phone number field**
+  (changed from the original "preserve and re-clamp the digits"
+  behavior, same user feedback) — a different country's number isn't a
+  truncated/extended version of the old one, and carrying over stale
+  digits was producing confusing, hard-to-predict results; the user must
+  retype after switching.
+- **Responsive layout fix** (same feedback): the old native `<select>`
+  inherited `inputClassName()`'s own `w-full` — which, depending on
+  Tailwind's internal utility ordering in the generated stylesheet, could
+  outrank the `w-32`/`sm:w-44` override meant to constrain it, making the
+  select expand to fill the entire row and push the phone number input
+  off-screen on narrow viewports. The new Dropdown-button trigger doesn't
+  use `inputClassName` at all (sized to its own content — just the flag),
+  removing that conflict outright; the phone `<input>` also gained
+  `min-w-0` alongside its existing `flex-1`, since a flex item's default
+  `min-width: auto` prevents it from ever shrinking below its own
+  intrinsic content width, which is the other half of what let the row
+  overflow a narrow screen.
+- **The phone field's placeholder changes with the selected country**
+  (same day, third follow-up). `PhoneInput.tsx` no longer accepts a
+  `placeholder` prop at all — the old static, BR-formatted i18n strings
+  (`auth.phonePlaceholder`/`contact.phonePlaceholder`) were deleted from
+  `i18n/types.ts` and all 5 locales as genuinely dead once every call
+  site stopped passing them. Instead, a small internal
+  `PLACEHOLDER_DIGITS` map (one representative national number per
+  supported country) is run through the *same* `AsYouType(country)`
+  formatter the real mask uses, so the example shown always matches the
+  actual mask rather than a hand-typed format string that could drift
+  from it — e.g. Brazil shows `(69) 99123-4567`, the US shows
+  `(202) 555-1234`. These are placeholder digit patterns, not translated
+  text, so they don't need an i18n entry.
 - **`useApiForm.generalErrors` is memoized** (`frontend/src/hooks/useApiForm.ts`,
   `useMemo` keyed on the underlying `generalMessages` state and the
   current language) — its reference only changes when the error state

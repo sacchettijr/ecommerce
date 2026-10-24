@@ -87,9 +87,12 @@ young, actively-evolving prototype, not a mature codebase).
 
 - `django-guardian` is installed and backend-registered but has no actual
   per-object permission usage anywhere.
-- Backend i18n: infrastructure (catalogs for all 5 languages) exists, but
-  only 3 strings are actually marked for translation, and `LANGUAGES`
-  itself only activates 3 of the 5 locales. `LANGUAGE_CODE` (backend) and
+- Backend i18n: infrastructure (catalogs for all 5 languages) exists, and
+  as of 2026-10-18 `LANGUAGES` activates all 5 locales (previously only
+  3 — `fr`/`it` requests silently fell back to English). Still only 7
+  strings are actually marked for translation project-wide, so most
+  custom backend-generated text will still render in English for every
+  locale until it's added to the catalogs. `LANGUAGE_CODE` (backend) and
   the frontend's `DEFAULT_LANGUAGE` fallback are both `"en"` now
   (2026-10-16, were `"pt-br"`/inconsistently `"en-us"` in `.env`) — all 5
   languages and the switcher are otherwise unchanged.

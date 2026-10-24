@@ -93,7 +93,7 @@ documented in code comments — keep it in mind before reordering that list.
 | `debug_toolbar.py` | conditionally adds `debug_toolbar` / removes `django_browser_reload` based on `DEBUG`/`TESTING` |
 | `drf_spectacular.py` | `SPECTACULAR_SETTINGS` |
 | `email.py` | SMTP settings |
-| `internationalization.py` | `LANGUAGE_CODE`, `LANGUAGES` (**currently only pt-br/en/es** — see `domain.md`), `LOCALE_PATHS`, `TIME_ZONE`, phone-number default region |
+| `internationalization.py` | `LANGUAGE_CODE`, `LANGUAGES` (**all 5 locales as of 2026-10-18** — see `domain.md`), `LOCALE_PATHS`, `TIME_ZONE`, phone-number default region |
 | `media.py` | `MEDIA_URL`, `MEDIA_ROOT` |
 | `messages.py` | `MESSAGE_TAGS` |
 | `middleware.py` | `MIDDLEWARE` list |

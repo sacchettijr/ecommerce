@@ -10,9 +10,9 @@ data. Each app follows `tests/{api,models,views}/` + `tests/factories/`.
 
 | App | Coverage |
 |---|---|
-| `app_account/` (label `account`) | Partial. Well covered: login/logout/session/signup/email-verification/password-reset/password-change (including the unchanged-password rejection)/profile-update flows, `is_staff` admin gate, `safe_next_path`, `frontend_scheme_and_domain` (`app_account/tests/api/test_auth_api.py`, `app_account/tests/test_frontend_url.py`); `UserAddressModel`'s primary-address invariant (first-is-primary, demote-on-set, promote-on-delete including the admin-formset-deletion edge case, DB constraint, cross-user isolation via the actual inline formset) and the `/api/account/addresses/` list/set-primary endpoints, including cross-user access attempts (`app_account/tests/models/test_user_address_rules.py`, `app_account/tests/api/test_user_address_api.py`); the country/state/city cross-field validation (`app_account/tests/models/test_user_address_form.py`); the address admin's rendered field order, standalone and inline (`app_account/tests/test_user_address_admin.py`); `UserWishlistModel`/`UserWishlistItemModel` — auto-creation on every user-creation path, one-wishlist-per-user, duplicate-product rejection (DB + form error message), `private` defaults to `False`, `position` append/reorg/gap-closing/cross-wishlist isolation, DB constraints (`app_account/tests/models/test_user_wishlist_rules.py`, `test_user_wishlist_item_rules.py`); the full `/api/account/wishlist/...` surface — own list (public+private), add (incl. duplicate/inactive rejection, ignoring any client-sent wishlist/user id), remove/toggle-privacy/move all scoped to the owner (404, not 403, for another user's item id, mirroring the address pattern), `check`, `share-link` (`app_account/tests/api/test_wishlist_item_api.py`); the public `/api/account/wishlist/public/{public_id}/` endpoint — works unauthenticated, only public items, response never contains a `private` key, bad/unknown id is 404, no cross-user leakage (`app_account/tests/api/test_public_wishlist_api.py`); the migration graph loads and matches model state (`app_account/tests/test_migrations.py`, written after the `NodeNotFoundError` incident — see `../memory/known_issues.md`). **Not covered**: `UserManagerModel` edge cases, every form except the auth/address/wishlist ones exercised via the API tests, `app_account/signals/create_default_superuser.py`, `app_account/management/commands/create_admin.py`, the wishlist admin inline formset. |
+| `app_account/` (label `account`) | Partial. Well covered: login/logout/session/signup/email-verification/password-reset/password-change (including the unchanged-password rejection)/profile-update flows, `is_staff` admin gate, `safe_next_path`, `frontend_scheme_and_domain` (`app_account/tests/api/test_auth_api.py`, `app_account/tests/test_frontend_url.py`); `UserAddressModel`'s primary-address invariant (first-is-primary, demote-on-set, promote-on-delete including the admin-formset-deletion edge case, DB constraint, cross-user isolation via the actual inline formset) and the `/api/account/addresses/` list/set-primary endpoints, including cross-user access attempts (`app_account/tests/models/test_user_address_rules.py`, `app_account/tests/api/test_user_address_api.py`); the country/state/city cross-field validation (`app_account/tests/models/test_user_address_form.py`); the address admin's rendered field order, standalone and inline (`app_account/tests/test_user_address_admin.py`); `UserWishlistModel`/`UserWishlistItemModel` — auto-creation on every user-creation path, one-wishlist-per-user, duplicate-product rejection (DB + form error message), `private` defaults to `False`, `position` append/reorg/gap-closing/cross-wishlist isolation, DB constraints (`app_account/tests/models/test_user_wishlist_rules.py`, `test_user_wishlist_item_rules.py`); the full `/api/account/wishlist/...` surface — own list (public+private), add (incl. duplicate/inactive rejection, ignoring any client-sent wishlist/user id), remove/toggle-privacy/move all scoped to the owner (404, not 403, for another user's item id, mirroring the address pattern), `check`, `share-link` (`app_account/tests/api/test_wishlist_item_api.py`); the public `/api/account/wishlist/public/{public_id}/` endpoint — works unauthenticated, only public items, response never contains a `private` key, bad/unknown id is 404, no cross-user leakage (`app_account/tests/api/test_public_wishlist_api.py`); the migration graph loads and matches model state (`app_account/tests/test_migrations.py`, written after the `NodeNotFoundError` incident — see `../memory/known_issues.md`); signup/profile-update reject a single-word `name` (`test_signup_rejects_a_single_word_name`, `test_profile_update_field_errors_for_invalid_values[name-Maria]`, added 2026-10-17 alongside the shared `validate_name()` fix — see `domain.md`). **Not covered**: `UserManagerModel` edge cases, every form except the auth/address/wishlist ones exercised via the API tests, `app_account/signals/create_default_superuser.py`, `app_account/management/commands/create_admin.py`, the wishlist admin inline formset. |
 | `app_address/` (label `address`) | Has its first tests of its own now (`app_address/tests/api/test_geo_filters.py`, added 2026-10-16: the country-filtered-states/state-filtered-cities endpoints, staff-only access). Everything else exercising `CityModel`/`StateModel`/`CountryModel` still does so indirectly through `app_account`'s address tests, including the new cross-field validation (`app_account/tests/models/test_user_address_form.py`). |
-| `app_core/` (label `core`) | **Zero tests.** `BaseModel`, `ContactForm`, `ContactSerializer`, `ContactViewSet`, `StableOrderingFilter`, `StandardPagination`, the health-check view — none tested. |
+| `app_core/` (label `core`) | Has its first tests now (added 2026-10-17): the full `/api/core/contact/` surface — valid submission accepted, invalid phone rejected and doesn't consume the cooldown, a single-word name rejected (`test_a_single_word_name_is_rejected`), the new 60s cooldown (blocked within the window with correct `retry_after`/`Retry-After`, allowed again once elapsed, independent per user/IP), and the pre-existing 5/hour cap confirmed still independently enforced (`app_core/tests/api/test_contact_api.py`); the cross-app `utils/rate_limit.py` helpers — atomic allow-and-record semantics under concurrency, user-vs-IP identification, a forged `X-Forwarded-For` entry not changing the computed identity (`app_core/tests/test_rate_limit.py`); the cross-app `utils/validator.py`'s `validate_name()` directly — every branch (empty, no letters, single word, punctuation-only second "part" not counting, 2+ parts accepted) (`app_core/tests/test_validators.py`, added 2026-10-17 — the first direct unit tests for anything in `utils/validator.py`). **Still not covered**: `BaseModel`, `ContactForm` (confirmed still dead/unused), `StableOrderingFilter`, `StandardPagination`, the health-check view, every other function in `utils/validator.py`. |
 | `app_product/` (label `product`) | Partial, concentrated on image ordering/upload paths (`app_product/tests/models/test_product_image_rules.py`, `test_upload_paths.py`) plus, added 2026-10-16: the admin field order (`app_product/tests/test_product_admin.py`) and the randomized default/explicit-override catalog ordering (`app_product/tests/api/test_product_randomized_ordering.py`). **Not covered**: `ProductCategoryModel`/`ProductModel` core logic beyond incidental factory use, `ProductForm`/`ProductCategoryForm`, `ProductFilterSet`, the list/category viewsets' other behavior (only ordering and the detail viewset are touched), most serializers. |
 
 No app has any `tests/views/*.py` content — every `views/__init__.py`
@@ -86,10 +86,8 @@ that for new test files rather than turning `globals` on.
   `src/components/account/AccountLayout.test.tsx`,
   `src/pages/ProfilePage.test.tsx`, `src/pages/ProfileEditPage.test.tsx`,
   `src/pages/PasswordChangePage.test.tsx`, `src/pages/AddressListPage.test.tsx`,
-  `src/auth/ProtectedRoute.test.tsx`, `src/hooks/useMessages.test.ts` —
-  plus one standalone pure-function test,
-  `src/components/ui/sanitizePhoneInput.test.ts` (59 tests total).
-  Added 2026-10-16: the public product pages' new pieces —
+  `src/auth/ProtectedRoute.test.tsx`, `src/hooks/useMessages.test.ts`
+  (59 tests total at the time). Added 2026-10-16: the public product pages' new pieces —
   `src/components/product/ProductBreadcrumb.test.tsx`,
   `ExpandableDescription.test.tsx`, `formatPrice.test.ts`,
   `productSort.test.ts`, `src/pages/ProductListPage.test.tsx` (ordering
@@ -106,12 +104,26 @@ that for new test files rather than turning `globals` on.
   project's first test of `ProductDetailPage.tsx` as a whole, previously
   untested), and `src/components/layout/UserMenu.test.tsx` (new file —
   `UserMenu.tsx` had no tests at all before; covers the wishlist/addresses
-  navigation and orders staying inert) (117 tests total now). Nothing else
-  in the frontend has tests yet (notably not `SignupPage.tsx` or
-  `ContactPage.tsx`, despite one of them also having a phone field, and no
-  test touches `HomePage.tsx` as a whole, only its extracted pieces) —
-  this is still a start, not full coverage; don't assume other
-  components/pages are tested.
+  navigation and orders staying inert) (117 tests total). Added 2026-10-17
+  (phone input + contact rate-limit countdown feature): the now-deleted
+  `sanitizePhoneInput.ts`/its test were superseded by
+  `src/components/ui/PhoneInput.test.tsx` (country switch preserving
+  digits, digit-only extraction, per-country mask, E.164 normalization
+  for both a BR and a non-BR number, re-syncing from an externally-changed
+  `value` prop); `src/pages/SignupPage.test.tsx` (new — that page had no
+  tests at all before: the country selector renders, a normalized E.164
+  phone is submitted, other fields survive a server-side field error);
+  `src/pages/ContactPage.test.tsx` (new — same page's first tests ever:
+  the phone field, the library-based client-side validity check replacing
+  the old ad-hoc digit-count one, the 429-driven countdown ticking down
+  and re-enabling the submit button via `vi.useFakeTimers()`, and the
+  countdown resuming correctly from `localStorage` after a simulated
+  reload); `ProfileEditPage.test.tsx` updated in place (the masked
+  display value, normalized submitted payload) rather than extended (130
+  tests total now). Nothing else in the frontend has tests yet, and no
+  test touches `HomePage.tsx` as a whole, only its extracted pieces — this
+  is still a start, not full coverage; don't assume other components/pages
+  are tested.
 - **Testing a page whose component calls `useParams()`**
   (`ProductDetailPage.tsx`, `PublicWishlistPage.tsx`):
   `renderWithProviders` (`src/test/renderWithProviders.tsx`) takes an

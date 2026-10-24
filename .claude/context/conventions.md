@@ -82,15 +82,20 @@
   `django.utils.translation.gettext_lazy as _`, called with the
   `message=` keyword (the project's consistent style — see any model's
   `verbose_name=_(message="...")`). Run `makemigrations`/`makemessages`
-  as needed and keep `.po` catalogs under `locale/` in sync. Current
-  catalogs are very sparse (3 real strings total across all 5 languages,
-  see `domain.md`) — this is a known gap, not a sign that most strings
-  don't need translation.
-- **`LANGUAGES` currently only includes pt-br/en/es** on the backend
-  (`PROJECT/settings/internationalization.py`) even though the frontend
-  fully supports fr/it — see `domain.md`. If a task requires backend
-  localization in French/Italian, that setting needs to change too; don't
-  assume it already matches the frontend's language list.
+  as needed and keep `.po` catalogs under `locale/` in sync — and when
+  adding a new `.po` entry, add it to **all 5** locale files (including
+  `en`, as an identity translation where `msgstr == msgid`), then run
+  `manage.py compilemessages -l en -l es -l fr -l it -l pt_BR` (scoped —
+  the no-args form also recompiles every third-party package's own
+  bundled catalogs across dozens of unrelated languages and is very
+  slow). Current catalogs are very sparse (7 real strings total across
+  all 5 languages as of 2026-10-18, see `domain.md`) — this is a known
+  gap, not a sign that most strings don't need translation.
+- **`LANGUAGES` includes all 5 locales** on the backend
+  (`PROJECT/settings/internationalization.py`) as of 2026-10-18 — it
+  previously only declared pt-br/en/es, which silently fell back to
+  English for any `fr`/`it` request regardless of catalog content. Don't
+  reintroduce that mismatch.
 - **Frontend**: a custom i18n system, not a library. Every translatable
   string is a key on one canonical `Translations` interface
   (`frontend/src/i18n/types.ts`), implemented once per language under

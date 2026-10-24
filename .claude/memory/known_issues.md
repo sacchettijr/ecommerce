@@ -177,9 +177,18 @@ needing further runtime verification.
 - `frontend/src/config/company.ts` reads several `VITE_COMPANY_*` env vars
   that are undocumented in `.env-example`/`.env` (all have hardcoded
   fallbacks, so nothing breaks — just undiscoverable).
-- Only 3 real translatable strings exist across all 5 backend locale
-  catalogs combined — i18n infrastructure is wired correctly but very
-  sparsely populated.
+- Backend locale catalogs are very sparsely populated — only 3 real
+  translatable strings existed across all 5 catalogs combined before
+  2026-10-18. That date's fix added the 4 full-name-validation messages
+  (now 7 total) after a user-reported bug showed one of them always
+  rendering in English — i18n activation itself (`LocaleMiddleware`)
+  works correctly; it's specifically that this project's own custom
+  `gettext_lazy()` strings have no catalog entries (Django's/third-party
+  packages' own messages translate fine via their own shipped catalogs).
+  Any other custom backend string not yet in the catalogs — there are
+  more scattered through the codebase beyond these 7 — will have the
+  same always-English symptom until added the same way. See
+  `changelog.md`'s 2026-10-18 entry for the exact fix and verification.
 
 ## Needs further verification (not yet confirmed at runtime)
 

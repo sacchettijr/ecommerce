@@ -26,7 +26,7 @@ live schema/docs (not just installed — confirmed: `SpectacularAPIView`/
 | `/api/account/wishlist/public/{public_id}/` | GET, `AllowAny` — a third party's wishlist by its opaque `public_id` (see `domain.md`); returns only `private=False` items, and the item shape has no `private` key at all |
 | `/api/product/products/`, `/api/product/products/{slug}/` | public product list/detail (`active=True` only); default order is a daily-seeded deterministic shuffle, not recency — see `domain.md`'s "Catalog ordering and randomization" |
 | `/api/product/categories/` | public category list (`active=True` only) |
-| `/api/core/contact/` | contact form submission (throttled, dispatches an email via Celery) |
+| `/api/core/contact/` | contact form submission; throttled by both the per-scope 5/hour cap *and* a precise 60s-between-accepted-sends cooldown (see `domain.md`); dispatches an email via Celery |
 | `/api/core/health/` | health check (used by the Docker/Render healthcheck) |
 | `/api/address/states/?country=<id>` | states for a country (`IsAdminUser`, no pagination — plain array) — backs the Django Admin's country→state cascade only, added 2026-10-16 |
 | `/api/address/cities/?state=<id>` | cities for a state (`IsAdminUser`, no pagination) — backs the admin's state→city cascade only, added 2026-10-16 |
@@ -64,7 +64,12 @@ read-only nested objects inside `/api/account/addresses/`'s response
   `../memory/known_issues.md`.
 - **Throttling**: per-scope `ScopedRateThrottle`, rates centralized in
   `PROJECT/settings/rest_framework.py` (`DEFAULT_THROTTLE_RATES`), applied
-  per-viewset via `throttle_scope`. See `domain.md` for the actual rates.
+  per-viewset via `throttle_scope`; `NUM_PROXIES = 1` (added 2026-10-17)
+  makes its IP-based identification trust exactly nginx's own appended
+  `X-Forwarded-For` entry, nothing a client pre-pends. See `domain.md`
+  for the actual rates and for `/api/core/contact/`'s extra, more precise
+  60s-between-accepted-sends cooldown layered on top via a separate
+  Redis-backed mechanism (`utils/rate_limit.py`).
 - **Error responses**: form/serializer validation errors use DRF's default
   shape. The account app additionally uses stable `code` values (e.g.
   `"invalid_link"`, `"inactive"`, `"email_not_verified"`) so the frontend

@@ -25,8 +25,10 @@ Check for:
 - **Tests**: is the new/changed behavior covered? Is a regression test
   present for a bug fix?
 - **i18n**: is every new user-facing string translatable, and translated
-  in all languages that need it on that side (backend: pt-br/en/es
-  currently active; frontend: all 5)?
+  in all 5 languages on both sides (backend `LANGUAGES` now activates all
+  5 too, as of 2026-10-18 — but the `.po` catalogs remain very sparse, so
+  check the actual catalog entries rather than assuming the locale being
+  active means the string is translated)?
 - **Scope**: does the diff contain unrelated changes, accidental
   deletions, or stray debug code?
 

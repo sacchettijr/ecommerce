@@ -19,9 +19,11 @@ and these steps:
    architecture. Keep API serializers/views/permissions/models/business
    logic properly separated (see `architecture.md`).
 4. Add translations for any new user-facing string, backend and frontend,
-   per `conventions.md`'s i18n section — remember the backend's
-   `LANGUAGES` setting currently only activates pt-br/en/es even though
-   the frontend supports 5 languages; check which side you're adding to.
+   per `conventions.md`'s i18n section — the backend's `LANGUAGES` setting
+   now activates all 5 locales (since 2026-10-18), but the gettext
+   catalogs are still very sparse, so add any new backend string to all
+   5 `.po` files and recompile (`manage.py compilemessages -l en -l es
+   -l fr -l it -l pt_BR`).
 5. Add tests (backend: pytest + factory-boy, matching the app's
    `tests/{api,models,views}/` layout; frontend: note that no test
    framework is installed yet — raise this rather than silently skipping

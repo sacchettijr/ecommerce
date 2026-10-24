@@ -12,6 +12,32 @@ Only rules actually verified in source code are documented here.
    via `current_app.send_task(...)` rather than a direct `.delay()` import —
    intentional, so a worker/name mismatch drops the task silently instead of
    raising an import error at dispatch time).
+1a. **The `name` field requires a full name (first and last), not a single
+   word** (added 2026-10-17, per direct user feedback — it was previously
+   letting a single-word name through). Enforced in
+   `utils/validator.py`'s `validate_name()`: non-empty, at least one
+   letter, **and at least two whitespace-separated parts that each
+   contain a letter** (a stray punctuation-only "part" left over from
+   normalization doesn't count toward the two required). This one shared
+   function is the single source of truth for the rule, consumed from
+   two independent places that must both apply it — not duplicated
+   logic: `NormalizedNameFieldMixin.clean_name()` (`app_account/forms/mixins/`,
+   used by `SignUpForm`, `UserUpdateForm`, and the Django Admin's
+   `UserAdminCreationForm`/`UserAdminChangeForm` — so this covers
+   signup, profile-edit, and admin user creation/editing alike) calls it
+   *in addition to* its own pre-existing `len(name) < 3` check (kept,
+   not replaced — the two checks aren't fully redundant for pathological
+   edge cases, and removing it had no upside); `ContactSerializer`
+   (`app_core/api/serializers/`) already had `validators=[validate_name]`
+   wired in from the start, so extending the shared function fixed the
+   contact form with no code change there at all. The frontend has a
+   matching (non-authoritative) client-side check only on
+   `ContactPage.tsx` (`hasFullName()`, mirroring the same "≥2
+   letter-containing parts" rule) — `SignupPage.tsx` has no equivalent
+   new client-side gate, matching this project's existing pattern of not
+   touching the shared `useApiForm` hook for a new per-field check;
+   backend validation is unchanged as the real enforcement point either
+   way.
 2. The verification link encodes `uid`/`token`. `EmailVerificationViewSet.confirm`
    validates the token with a custom `EmailVerificationTokenGenerator` whose
    hash includes `is_email_verified`, so the token **self-invalidates** once
@@ -105,6 +131,47 @@ endpoint) is deliberately not throttled** — unlike the other account
 mutation endpoints, it has no credential-guessing or abuse surface
 (no secret being verified), consistent with how an ordinary authenticated
 CRUD endpoint in this project is not throttled by default.
+
+`"NUM_PROXIES": 1` (added 2026-10-17) in the same `REST_FRAMEWORK` dict —
+nginx is the sole proxy in front of Django everywhere this app runs
+(confirmed via `nginx/nginx.conf`), and it honestly sets
+`X-Forwarded-For $proxy_add_x_forwarded_for`. Without this setting, DRF's
+`BaseThrottle.get_ident()` falls back to `REMOTE_ADDR`, which behind
+nginx is nginx's own container IP for every request — this had silently
+made every IP-based throttle above (most importantly `contact`, the only
+fully `AllowAny` one) shared across all anonymous visitors. Confirmed
+fixed by a dedicated test (`app_core/tests/test_rate_limit.py`) proving a
+forged leading `X-Forwarded-For` entry doesn't change the computed
+identity, while the real entry nginx itself appended still does.
+
+**Contact also has a second, more precise limit on top of the 5/hour one
+above**: exactly 60 seconds must elapse between *accepted* sends (not
+merely attempted ones — an invalid submission never starts or consumes
+it). This is deliberately a separate mechanism, not a replacement:
+`ScopedRateThrottle`'s own `wait()` is an *averaged* distribution over
+the remaining hourly quota, which can't express "exact seconds since the
+last accepted send." Implemented via `utils/rate_limit.py`'s
+`seconds_until_next_allowed(key, interval_seconds)` — a single
+`cache.add(key, next_allowed_at, timeout=interval_seconds)` call (Redis
+`SET NX EX` under the hood through Django's cache API) as the atomic
+"first writer in the window wins" primitive, avoiding a separate
+check-then-write race under concurrent requests. `ContactViewSet.create()`
+calls this only *after* `ContactSerializer.is_valid()` succeeds, then
+`raise Throttled(wait=remaining, code="contact_cooldown")` — reusing
+DRF's own exception class so both this and the automatic 5/hour throttle
+flow through one `handle_exception()` override (scoped to
+`ContactViewSet` only) that reshapes *either* mechanism's resulting 429
+into this project's stable-`code` convention:
+`{"code", "detail", "retry_after"}`, with `Retry-After` also set
+explicitly. Client identity: `utils/rate_limit.get_client_identifier()` —
+`"user:<pk>"` for an authenticated request, `"ip:<addr>"` (via
+`BaseThrottle().get_ident()`, reusing the `NUM_PROXIES` fix above)
+otherwise; never a client-supplied identifier. **If Redis is down, both
+mechanisms fail loud** (an unhandled exception, surfacing as a 500) —
+deliberately not given new fail-open/fail-closed handling, since they'd
+otherwise behave inconsistently with each other under the same outage;
+this project's cache-dependent code already has this characteristic
+everywhere, not something newly introduced here.
 
 ## Addresses (`account.UserAddressModel`, app_address, Django label `address`)
 
@@ -462,12 +529,20 @@ but is no longer the only way.
   public/private toggle, delete, an inert "Add to cart" button, and a
   "copy my wishlist link" action (`/account/wishlist/share-link/`).
   `/wishlist/:publicId` (`PublicWishlistPage.tsx`) shows only public
-  items, the same plain position number, no edit/delete/privacy controls,
-  and an inert "Give as a gift" button — **for anyone anonymous or not
-  the owner**. **If the signed-in visitor turns out to own this exact
-  `public_id`** (checked in the background via `/account/wishlist/
-  share-link/`, compared against the URL param — added 2026-10-16 per
-  user feedback), `PublicWishlistPage` swaps to rendering `WishlistPage`
+  items, no edit/delete/privacy controls, and an inert "Give as a gift"
+  button — **for anyone anonymous or not the owner**. Its priority number
+  is **re-derived from the visible items' own order (array index + 1),
+  not `item.position + 1`** (changed 2026-10-17, per user feedback) —
+  `position` lives in the same numbering space as the owner's hidden
+  private items, so once those are filtered out server-side the public
+  list's positions can have gaps (e.g. 0, 2, 3); showing those raw
+  numbers would look broken to a non-owner. `WishlistPage.tsx` (the
+  owner's own view) still uses `item.position + 1` directly, since that
+  list always includes every item and genuinely has no gaps. **If the
+  signed-in visitor turns out to own this exact `public_id`** (checked in
+  the background via `/account/wishlist/share-link/`, compared against
+  the URL param — added 2026-10-16 per user feedback), `PublicWishlistPage`
+  swaps to rendering `WishlistPage`
   directly instead, so the owner visiting their own share link gets the
   full editable view with private items, not the restricted public one.
   This check starts as `false` and only flips in the background — an
@@ -476,7 +551,25 @@ but is no longer the only way.
   boundary is still the backend: `/account/wishlist/public/...` itself
   never returns private items to anyone regardless of this check, so a
   wrong/bypassed frontend decision here can't leak anything — it would
-  just show the wrong *view*, not wrong *data*. `ProductDetailPage.tsx`'s
+  just show the wrong *view*, not wrong *data*. **Both wishlist pages
+  have a "Sort by" dropdown** (added 2026-10-17, per user feedback asking
+  for something "semelhante à lista de produtos" — the product list's
+  sort, `ProductSortSelect.tsx`/`productSort.ts`): name A-Z/Z-A, price
+  low-high/high-low, date added oldest/newest-first, plus a `"priority"`
+  default meaning "no secondary sort — show the stored order as-is."
+  **This is a pure client-side sort**
+  (`frontend/src/components/wishlist/wishlistSort.ts`'s `sortWishlistItems`),
+  deliberately *not* mirroring the product list's server-side `ordering`
+  query param — the whole wishlist is already fetched in one request (no
+  pagination), so there's nothing to gain from a round trip, and no
+  backend changes were needed. While any sort other than `"priority"` is
+  active on the owner's own page, the move up/down buttons are disabled
+  (`moveDisabled` prop on `WishlistItemRow`) — moving an item by priority
+  only makes sense while the list is actually displayed in priority
+  order, and the owner's `index === 0`/`isLast` boundary checks are
+  computed against the *unsorted* array (`sortWishlistItems` returns the
+  same array, same reference, for `"priority"`), so they stay correct
+  once sorting is switched back. `ProductDetailPage.tsx`'s
   wishlist button checks real membership via `/account/wishlist/check/`
   on load (only when authenticated) and toggles between "Add to
   wishlist"/"Remove from wishlist" after a successful backend response;
@@ -503,25 +596,34 @@ checkout implementation anywhere**:
 Treat any task that assumes a working cart as requiring that feature to be
 built from scratch, not extended.
 
-## Internationalization — backend/frontend mismatch
+## Internationalization — backend/frontend status
 
 The frontend's custom i18n (`frontend/src/i18n/`) has genuine, idiomatic
 translations for all five required languages (English, Portuguese,
 Spanish, French, Italian — confirmed by distinct content, not
 copy-pasted stubs). The backend's Django `LANGUAGES` setting
-(`PROJECT/settings/internationalization.py`) **currently only declares
-`pt-br`, `en`, `es`** — French and Italian are not active backend locales,
-even though `locale/fr/` and `locale/it/` gettext catalog directories exist
-on disk. This mismatch is explicitly called out in a code comment in
-`frontend/src/i18n/languages.ts`. Practical effect: French/Italian users
-get a fully translated UI, but backend-generated text (validation errors,
-email bodies) sent with `Accept-Language: fr`/`it` will not be localized by
-Django today. Additionally, the actual `.po` catalogs are very sparse —
-only 3 real translatable strings are marked for translation across all
-five languages combined (confirmed by reading `locale/en/LC_MESSAGES/django.po`
-in full). Most user-facing backend strings have not yet been wrapped for
-translation. See `conventions.md` for the i18n convention to follow when
-adding new translatable strings.
+(`PROJECT/settings/internationalization.py`) **as of 2026-10-18 declares
+all five** (`pt-br`, `en`, `es`, `fr`, `it`) — previously it only declared
+`pt-br`/`en`/`es`, which silently made French/Italian backend requests
+fall back to `LANGUAGE_CODE` (English) regardless of `Accept-Language`,
+confirmed via a direct HTTP request (even Django's own built-in messages,
+e.g. password validators, stayed in English for `fr`/`it` before this
+fix — proof it was `LocaleMiddleware` never activating those locales at
+all, not a catalog-content problem). `locale/fr/` and `locale/it/`
+gettext catalog directories already existed on disk with real content;
+only the `LANGUAGES` declaration was missing. Additionally, the actual
+`.po` catalogs remain very sparse — only 7 real translatable strings are
+marked for translation across all five languages combined (confirmed by
+reading `locale/en/LC_MESSAGES/django.po` in full). Most user-facing
+backend strings have not yet been wrapped for translation — any such
+string will render in English for every locale until it's added to all
+5 catalogs (see `conventions.md` for the i18n convention to follow when
+adding new translatable strings). Note also: Django's own shipped `it`
+translation catalog is itself incomplete for at least one built-in
+password-validator message (confirmed: "This password is too short..."
+stayed in English for `Accept-Language: it` even after enabling the
+locale) — this is an upstream Django/library gap, not something fixable
+in this project's own catalogs.
 
 ## Calculations
 

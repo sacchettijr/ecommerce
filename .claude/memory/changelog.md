@@ -1176,3 +1176,471 @@ Three small user-requested adjustments to the wishlist feature above:
 Verified: `tsc -b`, `eslint .`, full Vitest — 119 passed (two new tests
 added for the owner-detection swap, two existing tests updated for the
 priority-number change).
+
+## 2026-10-17 — Phone country selector/mask, and precise 60s contact rate limiting
+
+**Root cause of the task's "contact form blocks repeated sends" starting
+point, confirmed by reading the real code, not guessed**: DRF's built-in
+`ScopedRateThrottle` (`"contact": "5/hour"`), keyed by client IP via
+`BaseThrottle.get_ident()`, backed by Django's default cache (which is
+genuinely Redis in this Dockerized setup — `CACHES["default"]` →
+`django.core.cache.backends.redis.RedisCache`). Already emitted
+`Retry-After` automatically. **Found along the way**: this project had
+no `NUM_PROXIES` setting anywhere, so `get_ident()` fell back to
+`REMOTE_ADDR` — nginx's own container IP behind the reverse proxy for
+every request — silently sharing that 5/hour limit across every
+anonymous visitor. Fixed with `"NUM_PROXIES": 1` in `REST_FRAMEWORK`
+(`PROJECT/settings/rest_framework.py`): nginx is the sole, always-present
+proxy (confirmed via `nginx/nginx.conf`), and it honestly sets
+`X-Forwarded-For $proxy_add_x_forwarded_for`, so `NUM_PROXIES=1` trusts
+only the entry nginx itself appended — this fixes the shared-IP bug for
+both the pre-existing throttle and the new one below, for free.
+
+**New 60s-between-accepted-sends cooldown** (`utils/rate_limit.py`,
+new): `get_client_identifier(request)` (user pk if authenticated, else
+the `NUM_PROXIES`-aware IP — never a client-supplied id) and
+`seconds_until_next_allowed(key, interval_seconds)`, built on a single
+`cache.add(key, next_allowed_at, timeout=interval_seconds)` call — Redis
+`SET NX EX` under Django's cache API — as the atomic "first writer in
+the window wins" primitive, closing the check-then-write race a naive
+get-then-set would have under concurrent requests. `ContactViewSet.create()`
+(`app_core/api/viewsets/ContactViewSet.py`) calls this only *after*
+`ContactSerializer.is_valid()` succeeds, so an invalid submission never
+starts or consumes the cooldown; a blocked attempt `raise
+Throttled(wait=remaining, code="contact_cooldown")`, reusing DRF's own
+exception class. A new `handle_exception()` override, scoped to
+`ContactViewSet` only, unifies *either* throttle mechanism's resulting
+429 into this project's stable-`code` convention:
+`{"code", "detail", "retry_after"}`, with `Retry-After` set explicitly —
+`login`/`signup`/`password-reset`'s existing 429 shape is untouched.
+**Redis-down behavior is deliberately left as-is** (an unhandled
+exception, surfacing as a 500) — the same characteristic the pre-existing
+5/hour throttle already has via the identical cache backend; giving only
+the new piece bespoke fail-open/fail-closed handling would make the two
+mechanisms behave inconsistently under the same outage.
+
+**Phone country selector + dynamic mask** (`frontend/src/components/ui/PhoneInput.tsx`,
+new): replaces three independent, inconsistent phone implementations —
+`SignupPage.tsx`/`ProfileEditPage.tsx` shared a letter-stripping-only
+sanitizer (`sanitizePhoneInput.ts`, now deleted along with its test, no
+callers left), `ContactPage.tsx` had no sanitization at all. Built on
+`libphonenumber-js/min` (chosen specifically because it's the JS port of
+the same canonical Google libphonenumber metadata
+`django-phonenumber-field`/`phonenumbers` already uses server-side —
+front and back end share one ground truth; `/min` for reduced metadata
+size, since this project is bundle-size-conscious) — no prebuilt phone
+UI widget, consistent with this project's hand-rolled-input convention.
+Tracks `country`/national-digits as internal state (seeded from the
+incoming E.164 value, defaulting to `"BR"` when empty — matching the
+backend's own `PHONENUMBER_DEFAULT_REGION` default); the display mask and
+the emitted E.164 value both come from one shared `AsYouType` formatter
+pass per change. Country names use `Intl.DisplayNames` keyed to the
+current UI language — no static name list. `ContactPage.tsx`'s ad-hoc
+`phone.replace(/\D/g,"").length < 10` client check was replaced with the
+library's own `isValidPhoneNumber()`. No backend phone-model/validator
+code needed changing at all — `PhoneNumberField` already parses a
+leading-`+` international string correctly regardless of its configured
+region fallback, which is now what every form always sends.
+
+**Contact countdown** (`ContactPage.tsx`): on a 429, reads the body's
+`retry_after` (not the header — avoids any cross-origin header-exposure
+question) and ticks a `setInterval`-driven countdown, disabling just the
+submit button; the deadline is also mirrored into `localStorage` so a
+reload mid-cooldown resumes the countdown instead of showing a falsely
+enabled button — a client-side convenience only, since the backend
+re-checks for real on every actual submit attempt regardless of what the
+client remembers. All field values already survived a 429 before this
+change and still do.
+
+**Verification**: `manage.py check`, full `pytest` — 270 passed (no
+regressions), `ruff check`/`ruff format --check`/`mypy`/`basedpyright`
+all clean. `tsc -b`, `eslint .`, full Vitest — 130 passed, run twice to
+confirm stability after bumping two tests' timeouts (CPU-contention
+flakiness under the full 23-file parallel run, not a logic bug — each
+test passed individually before the bump), `npm run build` succeeds
+(bundle size grew by the inherent, accepted cost of
+`libphonenumber-js/min`'s full per-country metadata). **Not verified**:
+an actual browser click-through — no Chrome DevTools MCP connection was
+available this session either.
+
+## 2026-10-17 (same day, follow-up) — restrict phone country list, cap length per country
+
+Two adjustments to `PhoneInput.tsx` per direct user feedback:
+
+- The country `<select>` now offers only `["BR", "US", "FR", "IT"]` (a
+  fixed `SUPPORTED_COUNTRIES` list) instead of every ITU-assigned region
+  — these are the only countries the site currently serves. Display
+  names still come from `Intl.DisplayNames`, just restricted to these
+  codes; an existing stored value for a country outside this set falls
+  back to `"BR"` rather than leaving the `<select>` with an orphaned
+  value.
+- Typing or switching country now clamps the national number to that
+  country's own valid length via `libphonenumber-js/min`'s
+  `validatePhoneNumberLength()` — trimming trailing digits until it's no
+  longer `"TOO_LONG"` — rather than a hand-maintained max-digits table,
+  so it's correct even for Italy's variable-length numbers. Confirmed
+  against the user's own example: Brazil now caps at `(69) 99123-4567`
+  exactly (11 digits).
+- Found, not fixed (out of scope — unrelated to what was asked): France's
+  `AsYouType` mask only groups into "XX XX XX XX XX" when fed a leading
+  national trunk `0`, which this component never adds, so French numbers
+  display as ungrouped (but still correct/valid) digits. See
+  `architecture.md`.
+
+Verified: `tsc -b`, `eslint .`, full Vitest — 134 passed (4 new
+`PhoneInput.test.tsx` cases: the restricted option list, length clamping
+for Brazil and the US while typing, and re-clamping on a country switch
+to a shorter-max-length country), `npm run build` succeeds.
+
+## 2026-10-17 (same day, second follow-up) — phone country picker: real flags, clear-on-change, responsive fix
+
+Three more `PhoneInput.tsx` adjustments per direct user feedback (a
+reported failure when changing country after typing a number; the
+country control taking 100% width on mobile and pushing the phone input
+off-screen; wanting to reuse the site's existing flag images instead of
+the country name text):
+
+- **Country picker rebuilt as a `Dropdown` (`frontend/src/components/ui/Dropdown.tsx`)
+  instead of a native `<select>`**, since a native select's collapsed
+  display can only show plain text, never an `<img>`. Mirrors
+  `LanguagePicker.tsx` exactly — a flag-only trigger button, a menu with
+  flag + name + calling code per option — and reuses the *exact same*
+  flag image files the language switcher already ships
+  (`/img/locale/{pt-br,en,fr,it}.png`), not a new asset set and not
+  emoji (flag emoji render as two-letter codes on some platforms,
+  notably Windows). Required one small, fully backward-compatible
+  addition to the shared `Dropdown.tsx`: an optional `buttonClassName`
+  prop, defaulting to the exact classes `UserMenu.tsx`/`LanguagePicker.tsx`
+  already relied on (both left untouched, confirmed by their own tests
+  still passing unmodified) — `PhoneInput.tsx` passes its own
+  light-background-appropriate classes instead of Dropdown's
+  navbar-dark default.
+- **Selecting a country now always clears the phone field**, rather than
+  preserving and re-clamping the previously-typed digits (the behavior
+  from two tasks ago) — a different country's number isn't a
+  truncated/extended version of the old one, and the carry-over logic
+  was producing the failure the user reported. The user must retype
+  after switching.
+- **Root cause of the mobile overflow, confirmed**: the old native
+  `<select>` reused `inputClassName()`, which bakes in `w-full` —
+  depending on Tailwind's own internal utility ordering in the generated
+  stylesheet (not the order classes are written in the JSX), that could
+  outrank the `w-32`/`sm:w-44` override meant to constrain the select,
+  letting it expand to fill the whole row and push the phone number input
+  off-screen on narrow viewports. The new Dropdown trigger doesn't use
+  `inputClassName` at all (sized to its own content, just the flag),
+  removing the conflict outright. The phone `<input>` also gained
+  `min-w-0` alongside its existing `flex-1`, since a flex item's default
+  `min-width: auto` otherwise refuses to let it shrink below its own
+  intrinsic width — the other half of what let the row overflow.
+
+Verified: `tsc -b`, `eslint .`, full Vitest — 133 passed (one obsolete
+test describing the old preserve-and-clamp-on-switch behavior replaced
+with one asserting the field now clears; `UserMenu.test.tsx` — the only
+other `Dropdown` consumer with its own test coverage — still passes
+unmodified, confirming the new `buttonClassName` prop didn't change its
+behavior), `npm run build` succeeds. **Not verified**: an actual mobile
+viewport/browser check — no Chrome DevTools MCP connection was available
+this session; the responsive fix is reasoned from the CSS mechanics
+(`min-width: auto` on flex items, Tailwind's generated-stylesheet
+ordering) and from removing `inputClassName`'s `w-full` from the
+equation entirely, not from a visual confirmation.
+
+## 2026-10-17 (same day, third follow-up) — phone placeholder now follows the selected country
+
+`PhoneInput.tsx`'s `placeholder` prop is gone entirely; the old static,
+Brazil-formatted i18n strings it took (`auth.phonePlaceholder`,
+`contact.phonePlaceholder`) were deleted from `i18n/types.ts` and all 5
+locales — genuinely dead once the three call sites (Signup, ProfileEdit,
+Contact) stopped passing them. Replaced with a small internal
+`PLACEHOLDER_DIGITS` map (one representative national number per
+supported country) run through the exact same `AsYouType(country)`
+formatter the live mask uses, so the shown example always matches the
+real mask instead of a hand-typed string that could drift from it:
+Brazil → `(69) 99123-4567`, US → `(202) 555-1234`, France →
+`06 12 34 56 78`, Italy → `312 345 6789`. Changing the country swaps the
+placeholder immediately, same as every other per-country behavior now.
+
+Verified: `tsc -b`, `eslint .`, full Vitest — 134 passed (one new
+`PhoneInput.test.tsx` case confirming the placeholder for the initial
+country and after switching to the US), `npm run build` succeeds.
+
+## 2026-10-17 (same day, fourth follow-up) — wishlist: silent privacy toggle, public priority renumbering
+
+Two small, unrelated fixes to the wishlist feature, both per direct user
+feedback:
+
+- Toggling an item's privacy on `WishlistPage.tsx` no longer shows a
+  success alert — it just updates, matching how move-up/move-down already
+  behave. The now-unused `wishlist.privacyUpdated` i18n key was removed
+  from `types.ts` and all 5 locales.
+- `PublicWishlistPage.tsx`'s displayed priority number is now the item's
+  index within the *visible* (public-only) array (`index + 1`), not
+  `item.position + 1`. Root cause: `position` lives in the same numbering
+  space as the owner's hidden private items, so once the backend filters
+  those out, the public list's stored positions can have gaps (e.g.
+  0, 2, 3) — showing those raw numbers to a non-owner looked broken.
+  `WishlistPage.tsx` (the owner's own view, which always sees every item)
+  is unaffected and still uses `item.position + 1` directly.
+
+Verified: `tsc -b`, `eslint .`, full Vitest — 135 passed (one new
+`PublicWishlistPage.test.tsx` case feeding items with gapped stored
+positions and asserting the displayed priority is still sequential
+1/2/3; `WishlistPage.test.tsx`'s privacy-toggle test extended to assert
+no `alert`/`status` message appears).
+
+## 2026-10-17 (same day, fifth follow-up) — wishlist sorting (name/price/date added, both directions)
+
+New `frontend/src/components/wishlist/` directory (first use — the row
+components for both wishlist pages previously lived inline in their page
+files, with no shared wishlist-specific component folder yet):
+`wishlistSort.ts` (`WISHLIST_SORT_OPTIONS`, `sortWishlistItems`) and
+`WishlistSortSelect.tsx`, added to both `WishlistPage.tsx` and
+`PublicWishlistPage.tsx` per the user's explicit request for something
+"semelhante à lista de produtos."
+
+Deliberately **not** a port of the product list's server-side `ordering`
+query param: the wishlist is always fetched whole in one request (no
+pagination), so sorting it is a pure client-side array sort with no
+round trip and no backend change at all. Options: name A-Z/Z-A, price
+low-high/high-low, date added oldest/newest-first, plus a `"priority"`
+default (no secondary sort — shows the stored `position` order as-is,
+same array reference returned unchanged).
+
+On the owner's own page, selecting any sort other than `"priority"`
+disables the move up/down buttons — reordering by priority only makes
+sense while the list is actually *displayed* in priority order, so
+letting a click "move" an item while sorted by price would jump it to a
+visually unrelated spot. Verified the boundary-button logic (`isFirst`/
+`isLast`) stays correct once switching back to priority, since
+`sortWishlistItems` returns the untouched array (not a new one) for that
+case.
+
+Verified: `tsc -b`, `eslint .`, full Vitest — 148 passed (10 new
+`wishlistSort.test.ts` unit tests for all 7 sort values plus a
+no-mutation check; 2 new `WishlistPage.test.tsx` cases — sort reorders
+the list and disables move buttons, switching back to priority
+re-enables them; 1 new `PublicWishlistPage.test.tsx` case confirming
+sorting also renumbers the displayed priority column), `npm run build`
+succeeds.
+
+## 2026-10-17 (same day, sixth follow-up) — full name now requires first and last name
+
+**Root cause, confirmed by reading both validation paths directly**: the
+`name` field was validated in two independent places that had drifted
+apart. `ContactSerializer` already used `utils/validator.py`'s
+`validate_name()` — but that function only checked "non-empty" and "has
+at least one letter," never word count. `NormalizedNameFieldMixin`
+(signup/profile-edit/admin forms) didn't call `validate_name()` at all —
+it had its own separate `len(name) < 3` **character**-count check,
+which a single short name like "Ana" (3 characters) sails through. Fixed
+by extending `validate_name()` itself (the one place both paths can
+share) to also require at least two whitespace-separated parts that each
+contain a letter, then wiring `NormalizedNameFieldMixin.clean_name()` to
+actually call it (kept its existing length check too — not fully
+redundant, no reason to remove it). `ContactSerializer` needed zero code
+changes, since it was already calling the now-fixed shared function.
+
+This one shared fix covers signup, profile-edit, and the Django Admin's
+user-creation/edit forms (all three use `NormalizedNameFieldMixin`) plus
+the contact form — confirmed each path independently with a real HTTP
+request in the tests, not just reasoned about. Frontend: `ContactPage.tsx`
+gained a matching client-side `hasFullName()` check (replacing its old
+`length < 3` one) in its existing bespoke `validate()` function;
+`SignupPage.tsx` got no new client-side gate, matching this session's
+established pattern of not touching the shared `useApiForm` hook for a
+single new per-field rule — the (now-correct) backend remains the real
+enforcement point regardless. All 5 locales' `contact.nameError` string
+updated to describe the actual rule instead of a character count.
+
+Verified: `manage.py check`, full `pytest` — 283 passed including 8 new
+direct unit tests for `validate_name()` (`app_core/tests/test_validators.py`,
+first direct tests for anything in `utils/validator.py`) and new
+integration tests on signup/profile-update/contact, no regressions;
+`ruff`/`mypy`/`basedpyright` clean. `tsc -b`, `eslint .`, full Vitest —
+150 passed, `npm run build` succeeds. Attempted an actual live
+browser check now that the Chrome DevTools MCP connection succeeded for
+the first time this session — still blocked, but by a different, more
+fundamental cause than before: no Chrome binary is installed in this
+environment at all (`new_page` failed looking for `chrome.exe` in every
+standard install path), not a connection/config issue. Noted for
+whoever reads this later: a working live-browser check needs Chrome
+actually installed, not just the MCP server reachable.
+
+## 2026-10-18 — fixed the new full-name error always showing in English
+
+**User report**: "no cadastro do usuário independente do idioma
+selecionado, está retornando o erro em inglês" (the signup error comes
+back in English no matter which language is selected) — referring
+specifically to the four messages added in the previous entry above.
+
+**Root cause, confirmed with a real HTTP request, not guessed**: it was
+never a `LocaleMiddleware`/language-activation bug. A POST to
+`/api/account/signup/` with `Accept-Language: pt-br` and an invalid
+`password2` correctly returned Django's own built-in password-validator
+errors already translated to Portuguese — proving language activation
+itself works. Only this project's **own** `gettext_lazy()` strings
+stayed in English, because the backend's gettext catalogs
+(`locale/{en,es,fr,it,pt_BR}/LC_MESSAGES/django.po`) are almost entirely
+empty: only 3 real translated strings existed in each file, project-wide,
+before this fix — Django's and third-party packages' own shipped
+catalogs cover their own messages regardless, which is why this gap had
+never been noticed before. This also means the original, pre-existing
+"The name must be 3 characters." message was *always* untranslated too,
+not something this specific bug introduced.
+
+**Fix**: added the 4 messages from the full-name validation chain
+(`"The name must be 3 characters."` from `NormalizedNameFieldMixin.py`;
+`"The name cannot be empty."`, `"The name must contain at least one
+letter."`, `"Enter your full name (first and last name)."`, all three
+from `utils/validator.py`) to **all 5** `locale/*/LC_MESSAGES/django.po`
+files, including `en` as identity translations (msgstr == msgid, matching
+this file's own existing convention), then ran `manage.py
+compilemessages -l en -l es -l fr -l it -l pt_BR` to regenerate the `.mo`
+binaries Django actually reads at runtime (scoping to just these 5
+locales, rather than the default no-args form, which also needlessly
+re-walks and recompiles every third-party package's own bundled catalogs
+across dozens of unrelated languages).
+
+**Scope decision**: deliberately limited to these 4 messages — confirmed
+via inspection that no other custom-string messages exist in the
+email/date_birth/phone form mixins this session touched. The broader
+finding that this project's backend custom-string catalogs are
+essentially empty everywhere else is a real, larger pre-existing gap,
+flagged here rather than silently fixed in full, since auditing and
+translating every custom backend string project-wide was not what was
+asked and is a much bigger, separate undertaking.
+
+**Verified**: reran the diagnostic request with `Accept-Language: pt-br`
+— `name` error now returns `"Informe seu nome completo (nome e
+sobrenome)."` (previously the English string), `password2` unaffected.
+Deleted the temporary diagnostic test file
+(`app_account/tests/test_zzz_lang_debug.py`) used to reproduce/confirm
+this. Full backend suite re-run after the catalog/compile change: 283
+passed, no regressions (translation-only change, as expected).
+
+## 2026-10-18 (same day, follow-up) — French/Italian still showed English; `LANGUAGES` itself was missing them
+
+**User report**: "Está corrigido para português, mas ainda apresentando
+falha em outros idiomas." (fixed for Portuguese, but still failing in
+other languages) — reported immediately after the entry above.
+
+**Root cause, confirmed with a second real HTTP request per locale**: a
+POST with `Accept-Language: es` came back fully translated (both the
+custom `name` message and Django's own `password2` messages), but `fr`
+and `it` came back **entirely** in English — including Django's own
+built-in `password2` messages, which proved this wasn't a catalog-content
+issue at all (those two locales' catalogs on disk were already correct —
+see the previous entry). The actual cause: `PROJECT/settings/
+internationalization.py`'s `LANGUAGES` tuple only declared `("pt-br",
+"en"), ("es", ...)` — `fr`/`it` were never in Django's own list of active
+locales, so `LocaleMiddleware` silently fell back to `LANGUAGE_CODE`
+("en") for any `Accept-Language: fr`/`it` request, regardless of what the
+catalogs contained. This is the same gap already flagged as a known,
+pre-existing limitation in `.claude/context/domain.md` before today, now
+actually fixed rather than just documented.
+
+**Fix**: added `("fr", "Français")` and `("it", "Italiano")` to
+`LANGUAGES`. Confirmed no other backend code hardcodes the 3-language
+list (grepped for `LANGUAGE_CODE`/`get_language()`/language-tuple
+patterns project-wide — only this one setting controls which locales
+`LocaleMiddleware` will activate). Restarted the `backend` container
+(Gunicorn workers don't reload on a bind-mounted source change) and
+re-verified: `fr` and `it` now both return their own translated `name`
+message; `fr`'s `password2` messages are also now fully translated by
+Django's own shipped `fr` catalog. One exception found and left as-is:
+Italian's `password2` "too short" message stays in English even now —
+confirmed this is Django's own upstream `it` catalog being incomplete
+for that one specific built-in string, not something fixable in this
+project's own `.po` files, and out of scope to patch around.
+
+Also removed a now-stale explanatory comment in `frontend/src/i18n/
+languages.ts` that described this exact mismatch (frontend fully
+supporting fr/it, backend not) — no longer true. Updated
+`.claude/context/domain.md`, `conventions.md`, `project_state.md`,
+`structure.md`, `.claude/CLAUDE.md`, and `.claude/commands/
+{feature,review}.md`, all of which had explicitly documented "`LANGUAGES`
+currently only activates pt-br/en/es" as a known, accepted limitation —
+that limitation no longer holds, though the broader "most backend
+strings aren't in the catalogs at all" gap remains and is still flagged.
+
+**Verified**: `manage.py check` clean. Full `pytest` re-run after the
+settings change — 283 passed, no regressions. Deleted the second
+temporary diagnostic test file
+(`app_account/tests/test_zzz_lang_debug2.py`) used to confirm the fix
+across `es`/`fr`/`it` in one parametrized run.
+
+## 2026-10-18 (same day, second follow-up) — `PhoneInput`: backspace next to a mask literal did nothing
+
+**User report**: typing a wrong Brazilian area code (DDD) and trying to
+backspace it out got stuck — pressing Backspace right after the area
+code's `)` didn't remove anything, "o ) não some". Same symptom reported
+for US numbers.
+
+**Root cause**: `PhoneInput.tsx`'s `onDigitsChange` rebuilds `digits` by
+stripping all non-digit characters out of the raw `<input>` value on every
+keystroke. When the caret sits right after a mask literal (the `)` after
+an area code, a `-`, etc.) and the browser's native Backspace removes
+that one literal character, the digit sequence underneath is completely
+unchanged — so the very next render re-masks the identical digits back
+into the identical display string, including re-inserting the same `)`.
+Visually indistinguishable from Backspace doing nothing.
+
+**Fix**: added an `onKeyDown` handler on the phone `<input>` that, only
+for a collapsed-caret Backspace/Delete landing on a mask literal (not a
+real digit, and not an actual text selection — both of those still fall
+through to the existing, already-correct `onChange` path unchanged),
+`preventDefault()`s the native edit and instead removes the adjacent
+digit directly from the `digits` state itself (the nearest digit before
+the caret for Backspace, the nearest one at/after it for Delete) — then
+restores the caret to just after that digit's new position via a
+`useLayoutEffect` keyed on the recomputed mask, so repeated Backspace
+presses keep working naturally instead of getting stuck or jumping to the
+end. Two small pure helpers (`digitsBefore`, `positionAfterDigit`) do the
+display-string-index ↔ digit-index mapping; no new dependency, no change
+to the already-correct typing/paste path.
+
+**Verified**: added 2 regression tests (`PhoneInput.test.tsx`) — Backspace
+right after the BR and US area codes' `)` now actually removes a digit
+(confirmed against `libphonenumber-js`'s real `AsYouType` output run
+directly in the frontend container, not guessed) instead of leaving the
+value unchanged. Full frontend suite: `tsc -b` clean, `eslint .` clean,
+full Vitest — 152 passed (was 150), no regressions.
+
+## 2026-10-18 (same day, third follow-up) — product card: title and image now link to the details page too
+
+**Request**: on the product listing, make the title and image act like the
+existing "Details view" button — clicking either should also navigate to
+the product's detail page.
+
+**Change** (`frontend/src/components/product/ProductCard.tsx`): wrapped
+the thumbnail image (and the no-thumbnail placeholder, which occupies the
+same visual slot) and the `<h3>` title text each in their own
+`<Link to={`/product/${product.slug}`}>`, reusing the exact same
+destination the "Details view" button already links to. The "Add to
+cart" button is untouched (still its own separate control; cart itself
+remains unimplemented — see `domain.md`'s Wishlist/cart section).
+
+**Verified**: new `ProductCard.test.tsx` (first dedicated test file for
+this component) — image, no-image placeholder, and title all link to
+`/product/<slug>`. Full frontend suite: `tsc -b` clean, `eslint .` clean,
+full Vitest — 155 passed (was 152, +3 new), no regressions.
+
+## 2026-10-18 (same day, fourth follow-up) — removed the redundant "Categories" heading from the navbar's category dropdown
+
+**Request**: remove "Categories" from the top navbar's category dropdown.
+
+**Change** (`frontend/src/components/layout/Navbar.tsx`): the dropdown's
+trigger button is already labeled with `t.nav.category` ("Category"); the
+open menu additionally repeated an uppercase "Categories" heading above
+the list of actual category links — removed that heading `<p>`, since the
+button label already identifies what the menu is. Confirmed via grep that
+`t.nav.categories` had no other callers, so removed the now-dead key from
+`i18n/types.ts` and all 5 locale files rather than leaving an unused
+translation behind (this project's convention). Left the unrelated
+`product.categoriesTitle` key (a different dropdown, used by the product
+list's category filter) untouched — same English word, different
+component, not part of this request.
+
+**Verified**: `tsc -b` clean, `eslint .` clean, full Vitest — 155 passed,
+no regressions (no test asserted the removed heading, backend untouched).

@@ -76,10 +76,14 @@ otherwise for commit messages/documentation.
 The application must support English (default), Portuguese, Spanish,
 French, and Italian. **Current state** (see `.claude/context/domain.md`
 and `conventions.md` for detail): the frontend's custom i18n system fully
-supports all five; the backend's Django `LANGUAGES` setting currently only
-activates pt-br/en/es, and the gettext catalogs under `locale/` are very
-sparsely populated. Do not assume backend localization already works for
-French/Italian.
+supports all five; the backend's Django `LANGUAGES` setting activates all
+five as of 2026-10-18 (it previously only activated pt-br/en/es, which
+silently made French/Italian backend requests fall back to English
+regardless of catalog content), but the gettext catalogs under `locale/`
+remain very sparsely populated — most custom backend strings have not
+been added to any catalog yet and will render in English for every
+locale until they are. Do not assume a given custom backend string is
+translated just because the locale itself is now active.
 
 Reuse the existing translation mechanisms (`gettext_lazy` on the backend,
 the custom `Translations`-interface system on the frontend) — do not

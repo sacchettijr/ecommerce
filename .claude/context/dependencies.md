@@ -49,7 +49,12 @@ ruff==0.16.6
 
 ## Frontend (`frontend/package.json`)
 
-Dependencies: `@tailwindcss/vite` ^4.3.3, `react`/`react-dom` ^19.2.8,
+Dependencies: `@tailwindcss/vite` ^4.3.3, `libphonenumber-js` ^1.13.15
+(added 2026-10-17 — the phone country-selector/mask feature; imported
+only from its `/min` entry point for reduced metadata size, and only for
+its data/formatting/validation logic, not any UI — this project hand-rolls
+every input rather than pulling in a styled phone-input widget; see
+`domain.md`/`architecture.md`), `react`/`react-dom` ^19.2.8,
 `react-markdown` ^10.1.0, `react-router` ^8.4.0 (unified package — not
 `react-router-dom`), `remark-gfm` ^4.0.1, `tailwindcss` ^4.3.3.
 
