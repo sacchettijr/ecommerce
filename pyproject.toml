@@ -57,6 +57,7 @@ include = [
     "app_account",
     "app_product",
     "app_address",
+    "app_checkout",
     "manage.py",
     "utils",
 
