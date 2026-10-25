@@ -51,7 +51,7 @@ function CartItemRow({
             <div className="min-w-0 flex-1">
                 <h3 className="font-semibold wrap-break-words">{product.name}</h3>
                 <p className="text-sm text-gray-500">{product.slug}</p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm font-semibold text-gray-900">
                     {t.cart.unitPriceLabel}: {formatPrice(Number(item.unit_price))}
                 </p>
             </div>
@@ -265,6 +265,21 @@ export function CartPage() {
                                             <dd>{formatPrice(Number(cart.total))}</dd>
                                         </div>
                                     </dl>
+                                </div>
+
+                                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                                    <Link
+                                        to="/"
+                                        className="rounded-lg px-4 py-2 text-center font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
+                                    >
+                                        {t.cart.continueShopping}
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        className="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-700"
+                                    >
+                                        {t.cart.checkoutButton}
+                                    </button>
                                 </div>
                             </>
                         )}

@@ -14,7 +14,7 @@ import { useCart } from "../../context/useCart.ts";
 import { useCategories } from "../../context/useCategories.ts";
 import { useLanguage } from "../../i18n/useLanguage.ts";
 import { Dropdown } from "../ui/Dropdown.tsx";
-import { CloseIcon, MenuIcon } from "../ui/icons.tsx";
+import { CartPlusIcon, CloseIcon, MenuIcon } from "../ui/icons.tsx";
 import { LanguagePicker } from "./LanguagePicker.tsx";
 import { UserMenu } from "./UserMenu.tsx";
 
@@ -183,9 +183,10 @@ export function Navbar() {
                             <Link
                                 to="/cart"
                                 onClick={closeMenu}
-                                className="block rounded px-3 py-2 text-gray-300 hover:text-white"
+                                className="flex items-center gap-1.5 rounded px-3 py-2 text-gray-300 hover:text-white"
                             >
                                 {t.nav.cart(cart?.items.length ?? 0)}
+                                <CartPlusIcon className="size-5" />
                             </Link>
                         </li>
                     </ul>

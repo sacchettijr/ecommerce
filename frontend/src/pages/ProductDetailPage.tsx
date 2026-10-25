@@ -16,6 +16,7 @@ import { ProductPrice } from "../components/product/ProductPrice.tsx";
 import { useAddToCart } from "../components/product/useAddToCart.ts";
 import { CartPlusIcon, HeartIcon } from "../components/ui/icons.tsx";
 import { useAuth } from "../context/useAuth.ts";
+import { useWishlist } from "../context/useWishlist.ts";
 import { useAsync } from "../hooks/useAsync.ts";
 import { useLanguage } from "../i18n/useLanguage.ts";
 import { NotFoundPage } from "./NotFoundPage.tsx";
@@ -149,7 +150,9 @@ function ProductDetail({ slug }: { slug: string }) {
     const { data, error, loading } = useAsync(fetchProduct, slug);
     const [searchParams, setSearchParams] = useSearchParams();
     const addToCart = useAddToCart({ id: data?.id ?? 0, slug });
+    const { setItems: setWishlistItems } = useWishlist();
     const resumedRef = useRef(false);
+    const resumedWishlistRef = useRef(false);
 
     // Resumes an add-to-cart intent carried through the login redirect
     // (?addToCart=1, see useAddToCart.ts) — fires at most once, and strips the query
@@ -174,6 +177,38 @@ function ProductDetail({ slug }: { slug: string }) {
         );
         addToCart.add();
     }, [data, user, searchParams, setSearchParams, addToCart]);
+
+    // Same resume pattern for a wishlist intent (?addToWishlist=1, see
+    // useAddToWishlist.ts, used by ProductCard's grid heart button) — fires the plain
+    // API call directly rather than going through useAddToWishlist again, then pushes
+    // the fresh list into the shared WishlistContext (so every ProductCard's heart icon
+    // reflects it too) and lets WishlistToggleButton's own separate membership check
+    // (which always runs on mount) pick up the new state naturally once it resolves.
+    useEffect(() => {
+        if (
+            resumedWishlistRef.current ||
+            data === undefined ||
+            !user ||
+            searchParams.get("addToWishlist") !== "1"
+        ) {
+            return;
+        }
+
+        resumedWishlistRef.current = true;
+        setSearchParams(
+            (params) => {
+                params.delete("addToWishlist");
+                return params;
+            },
+            { replace: true },
+        );
+        addToWishlist(data.id)
+            .then(setWishlistItems)
+            .catch(() => {
+                // WishlistToggleButton still shows "Add to wishlist" if this failed
+                // (e.g. the product became inactive meanwhile) — the user can retry.
+            });
+    }, [data, user, searchParams, setSearchParams, setWishlistItems]);
 
     // Produto inexistente ou inativo: a API responde 404 e a página cai no 404 padrão.
     if (error instanceof ApiError && error.status === 404) {

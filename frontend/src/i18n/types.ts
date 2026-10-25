@@ -45,6 +45,8 @@ export interface Translations {
         noImage: string;
         viewDetails: string;
         addToCart: (name: string) => string;
+        addToWishlistLabel: (name: string) => string;
+        addToWishlistError: string;
         empty: string;
         allProductsTitle: string;
         notFound: string;
@@ -304,5 +306,7 @@ export interface Translations {
         totalLabel: string;
         couponLabel: string;
         couponButton: string;
+        continueShopping: string;
+        checkoutButton: string;
     };
 }

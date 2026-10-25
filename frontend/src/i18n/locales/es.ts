@@ -47,6 +47,9 @@ export default {
         noImage: "Sin imagen",
         viewDetails: "Ver detalles",
         addToCart: (name: string) => `Añadir ${name} al carrito`,
+        addToWishlistLabel: (name: string) => `Añadir ${name} a la lista de deseos`,
+        addToWishlistError:
+            "No se pudo añadir este producto a la lista de deseos. Inténtalo de nuevo.",
         empty: "Aún no hay productos registrados.",
         allProductsTitle: "Productos",
         notFound: "No se encontraron productos.",
@@ -322,5 +325,7 @@ export default {
         totalLabel: "Total a pagar",
         couponLabel: "Cupón de descuento",
         couponButton: "Aplicar",
+        continueShopping: "Seguir comprando",
+        checkoutButton: "Finalizar compra",
     },
 } satisfies Translations;

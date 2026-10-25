@@ -287,4 +287,19 @@ describe("ProductDetailPage add to cart", () => {
         ).toBeInTheDocument();
         expect(screen.getByRole("heading", { name: "Blue Mug" })).toBeInTheDocument();
     });
+
+    it("resumes a pending add-to-wishlist intent after landing back with ?addToWishlist=1", async () => {
+        mockedFetchProduct.mockResolvedValue(makeProductDetail());
+        mockedCheck.mockResolvedValue({ in_wishlist: false, item_id: null });
+        mockedAdd.mockResolvedValue([]);
+
+        renderWithProviders(<ProductDetailPage />, {
+            user: makeSessionUser(),
+            route: "/product/blue-mug?addToWishlist=1",
+            path: "product/:slug",
+        });
+
+        await waitFor(() => expect(mockedAdd).toHaveBeenCalledWith(10));
+        expect(mockedAdd).toHaveBeenCalledTimes(1);
+    });
 });

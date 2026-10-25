@@ -164,4 +164,28 @@ describe("CartPage", () => {
         expect(mockedRemove).not.toHaveBeenCalled();
         expect(screen.getByText(/\$19\.90/)).toBeInTheDocument();
     });
+
+    it("shows 'Continue shopping' linking home and a 'Checkout' button below the form", () => {
+        renderWithProviders(<CartPage />, {
+            user: makeSessionUser(),
+            cart: makeCartSummary({ items: [makeCartItem()] }),
+        });
+
+        expect(screen.getByRole("link", { name: "Continue shopping" })).toHaveAttribute(
+            "href",
+            "/",
+        );
+        expect(screen.getByRole("button", { name: "Checkout" })).toBeInTheDocument();
+    });
+
+    it("neither empty-cart state shows the continue-shopping/checkout buttons twice", () => {
+        renderWithProviders(<CartPage />, {
+            user: makeSessionUser(),
+            cart: makeCartSummary(),
+        });
+
+        expect(
+            screen.queryByRole("button", { name: "Checkout" }),
+        ).not.toBeInTheDocument();
+    });
 });

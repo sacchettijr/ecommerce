@@ -2,13 +2,15 @@ import { Link } from "react-router";
 
 import type { Product } from "../../api/types.ts";
 import { useLanguage } from "../../i18n/useLanguage.ts";
-import { CartPlusIcon } from "../ui/icons.tsx";
+import { CartPlusIcon, HeartIcon } from "../ui/icons.tsx";
 import { formatPrice } from "./formatPrice.ts";
 import { useAddToCart } from "./useAddToCart.ts";
+import { useAddToWishlist } from "./useAddToWishlist.ts";
 
 export function ProductCard({ product }: { product: Product }) {
     const { t } = useLanguage();
     const { add, pending } = useAddToCart(product);
+    const wishlist = useAddToWishlist(product);
 
     return (
         <div className="flex h-full flex-col overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-gray-200">
@@ -58,6 +60,19 @@ export function ProductCard({ product }: { product: Product }) {
                         className="rounded-lg border border-blue-600 px-3 py-2 text-blue-600 hover:bg-blue-50 disabled:opacity-50"
                     >
                         <CartPlusIcon className="size-5" />
+                    </button>
+                    <button
+                        type="button"
+                        disabled={wishlist.pending || wishlist.added}
+                        title={t.product.addToWishlistLabel(product.name)}
+                        aria-label={t.product.addToWishlistLabel(product.name)}
+                        onClick={wishlist.add}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    >
+                        <HeartIcon
+                            className="size-5"
+                            fill={wishlist.added ? "currentColor" : "none"}
+                        />
                     </button>
                 </div>
             </div>
