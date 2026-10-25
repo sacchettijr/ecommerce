@@ -26,10 +26,16 @@ services:
         build:
             context: ./cloudbeaver
         restart: unless-stopped
+        environment:
+            CLOUDBEAVER_ROOT_URI: /cloudbeaver/
+            CLOUDBEAVER_APP_FORWARD_PROXY: "true"
         volumes:
             - cloudbeaver:/opt/cloudbeaver/workspace
-        ports:
-            - "8978:8978"
+            - ./cloudbeaver/initial-data-sources.conf:/opt/cloudbeaver/conf/initial-data-sources.conf:ro
+        # ports:
+        #     - "8978:8978"
+        expose:
+          - "8978"
         networks:
             - ecommerce_network
         depends_on:
