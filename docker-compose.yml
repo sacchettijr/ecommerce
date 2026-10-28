@@ -1,230 +1,226 @@
 services:
-    #   BANCO DE DADOS
-    database:
-        container_name: ecommerce_postgres
-        build:
-            context: ./database
-        restart: unless-stopped
-        volumes:
-            - postgres:/var/lib/postgresql/data
-        env_file:
-            - .env
-        ports:
-            - "5432:5432"
-        networks:
-            - ecommerce_network
-        healthcheck:
-            test:
-                ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
+  #   BANCO DE DADOS
+  database:
+    container_name: ecommerce_postgres
+    build:
+      context: ./database
+    restart: unless-stopped
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    networks:
+      - ecommerce_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-    #   VISUALIZAÇÃO E MANIPULAÇÃO DO BANCO DE DADOS
-    cloudbeaver:
-        container_name: ecommerce_cloudbeaver
-        build:
-            context: ./cloudbeaver
-        restart: unless-stopped
-        environment:
-            CLOUDBEAVER_ROOT_URI: /cloudbeaver/
-            CLOUDBEAVER_APP_FORWARD_PROXY: "true"
-        volumes:
-            - cloudbeaver:/opt/cloudbeaver/workspace
-            - ./cloudbeaver/initial-data-sources.conf:/opt/cloudbeaver/conf/initial-data-sources.conf:ro
-        # ports:
-        #     - "8978:8978"
-        expose:
-          - "8978"
-        networks:
-            - ecommerce_network
-        depends_on:
-            - database
+  #   VISUALIZAÇÃO E MANIPULAÇÃO DO BANCO DE DADOS
+  cloudbeaver:
+    container_name: ecommerce_cloudbeaver
+    build:
+      context: ./cloudbeaver
+    restart: unless-stopped
+    environment:
+      CLOUDBEAVER_ROOT_URI: /cloudbeaver/
+      CLOUDBEAVER_APP_FORWARD_PROXY: "true"
+    volumes:
+      - cloudbeaver:/opt/cloudbeaver/workspace
+      - ./cloudbeaver/initial-data-sources.conf:/opt/cloudbeaver/conf/initial-data-sources.conf:ro
+    # ports:
+    #     - "8978:8978"
+    expose:
+      - "8978"
+    networks:
+      - ecommerce_network
+    depends_on:
+      - database
 
-    #   CACHE DO DJANGO + RESULT BACKEND DO CELERY
-    redis:
-        container_name: ecommerce_redis
-        build:
-            context: ./redis
-        restart: unless-stopped
-        volumes:
-            - redis:/data
-            - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
-        ports:
-            - "6379:6379"
-        networks:
-            - ecommerce_network
-        healthcheck:
-            test: ["CMD", "redis-cli", "ping"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
+  #   CACHE DO DJANGO + RESULT BACKEND DO CELERY
+  redis:
+    container_name: ecommerce_redis
+    build:
+      context: ./redis
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+      - "6379:6379"
+    networks:
+      - ecommerce_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-    #   BROKER DE MENSAGENS DO CELERY
-    rabbitmq:
-        container_name: ecommerce_rabbitmq
-        build:
-            context: ./rabbitmq
-        restart: unless-stopped
-        env_file:
-            - .env
-        volumes:
-            - rabbitmq:/var/lib/rabbitmq
-            - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
-        ports:
-            - "5672:5672"
-            - "15672:15672"
-        networks:
-            - ecommerce_network
-        healthcheck:
-            test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
+  #   BROKER DE MENSAGENS DO CELERY
+  rabbitmq:
+    container_name: ecommerce_rabbitmq
+    build:
+      context: ./rabbitmq
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - ecommerce_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-    #   WORKER DO CELERY (mesma imagem do django, comando diferente)
-    celery:
-        container_name: ecommerce_celery
-        build:
-            context: .
-        restart: unless-stopped
-        entrypoint: []
-        command: celery -A PROJECT worker --loglevel=info
-        working_dir: /app
-        volumes:
-            - .:/app
-        env_file:
-            - .env
-        networks:
-            - ecommerce_network
-        depends_on:
-            database:
-                condition: service_healthy
-            redis:
-                condition: service_healthy
-            rabbitmq:
-                condition: service_healthy
+  #   WORKER DO CELERY (mesma imagem do django, comando diferente)
+  celery:
+    container_name: ecommerce_celery
+    build:
+      context: .
+    restart: unless-stopped
+    entrypoint: []
+    command: celery -A PROJECT worker --loglevel=info
+    working_dir: /app
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    networks:
+      - ecommerce_network
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
-    #   BACKEND
-    backend:
-        container_name: ecommerce_django
-        build:
-            context: .
-        restart: unless-stopped
-        working_dir: /app
-        volumes:
-            - .:/app
-            - staticfiles:/app/staticfiles
-            - media:/app/mediafiles
-        env_file:
-            - .env
-        expose:
-            - "8000"
-        networks:
-            - ecommerce_network
-        depends_on:
-            database:
-                condition: service_healthy
-            redis:
-                condition: service_healthy
-            rabbitmq:
-                condition: service_healthy
-        healthcheck:
-            test:
-                [
-                    "CMD",
-                    "python",
-                    "-c",
-                    "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/core/health/', timeout=3)",
-                ]
-            interval: 5s
-            timeout: 5s
-            retries: 10
-            start_period: 10s
+  #   BACKEND
+  backend:
+    container_name: ecommerce_django
+    build:
+      context: .
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+      - staticfiles:/app/staticfiles
+      - media:/app/mediafiles
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    networks:
+      - ecommerce_network
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/core/health/', timeout=3)",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
-    #   FRONTEND (React + Vite)
-    frontend:
-        container_name: ecommerce_frontend
-        build:
-            context: ./frontend
-        restart: unless-stopped
-        working_dir: /app
-        volumes:
-            - ./frontend:/app
-            - frontend_node_modules:/app/node_modules
-            #   Read-only: lets the jsdom-based admin-JS tests (src/admin-js/) read the
-            #   real static/src/js/admin/*.js source Django actually serves, since it
-            #   otherwise lives outside this container entirely.
-            - ./static:/repo-static:ro
-        env_file:
-            - .env
-        expose:
-            - "5173"
-        networks:
-            - ecommerce_network
-        depends_on:
-            - backend
-        healthcheck:
-            test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:5173/"]
-            interval: 5s
-            timeout: 5s
-            retries: 10
-            start_period: 10s
+  #   FRONTEND (React + Vite)
+  frontend:
+    container_name: ecommerce_frontend
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - ./static:/repo-static:ro
+    env_file:
+      - .env
+    expose:
+      - "5173"
+    networks:
+      - ecommerce_network
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:5173/"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
-    #   NGINX
-    nginx:
-        container_name: ecommerce_nginx
-        build:
-            context: ./nginx
-        restart: unless-stopped
-        ports:
-            - "80:80"
-            - "443:443"
-        volumes:
-            - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-            - staticfiles:/app/staticfiles:ro
-            - media:/app/mediafiles:ro
-            - certbot_webroot:/var/www/certbot:ro
-            - letsencrypt:/etc/letsencrypt:ro
-        networks:
-            - ecommerce_network
-        depends_on:
-            backend:
-                condition: service_healthy
-            frontend:
-                condition: service_healthy
+  #   NGINX
+  nginx:
+    container_name: ecommerce_nginx
+    build:
+      context: ./nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - staticfiles:/app/staticfiles:ro
+      - media:/app/mediafiles:ro
+      - certbot_webroot:/var/www/certbot:ro
+      - letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - ecommerce_network
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
 
-    certbot:
-        container_name: ecommerce_certbot
-        image: certbot/certbot:latest
-        profiles:
-          - certbot
-        volumes:
-            - certbot_webroot:/var/www/certbot
-            - letsencrypt:/etc/letsencrypt
-        networks:
-            - ecommerce_network
+  certbot:
+    container_name: ecommerce_certbot
+    image: certbot/certbot:latest
+    profiles:
+      - certbot
+    volumes:
+      - certbot_webroot:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    networks:
+      - ecommerce_network
 
 networks:
-    ecommerce_network:
-        driver: bridge
+  ecommerce_network:
+    driver: bridge
 
 volumes:
-    postgres:
-        driver: local
-    cloudbeaver:
-        driver: local
-    redis:
-        driver: local
-    rabbitmq:
-        driver: local
-    staticfiles:
-        driver: local
-    media:
-        driver: local
-    frontend_node_modules:
-        driver: local
-    certbot_webroot:
-        driver: local
-    letsencrypt:
-        driver: local
+  postgres:
+    driver: local
+  cloudbeaver:
+    driver: local
+  redis:
+    driver: local
+  rabbitmq:
+    driver: local
+  staticfiles:
+    driver: local
+  media:
+    driver: local
+  frontend_node_modules:
+    driver: local
+  certbot_webroot:
+    driver: local
+  letsencrypt:
+    driver: local

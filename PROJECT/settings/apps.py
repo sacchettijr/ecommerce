@@ -13,6 +13,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     #   DEV
     "django_browser_reload",
+    "django_extensions",
     #   LIBS
     "corsheaders",
     "phonenumber_field",
