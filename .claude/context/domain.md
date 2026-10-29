@@ -575,26 +575,137 @@ but is no longer the only way.
   wishlist"/"Remove from wishlist" after a successful backend response;
   guests see a link to `/login?next=...` instead of a dead button. "Add
   to cart" and "Give as a gift" are explicitly visual-only per the
-  original task's scope — no cart/order/payment logic exists.
+  original task's scope — no cart/order/payment logic exists. (The real
+  cart now exists — see the Shopping cart section below — but these two
+  wishlist-row buttons were deliberately left untouched/inert; wiring
+  them up was not part of the cart task's scope, and the wishlist page
+  already has a dedicated test asserting the "Add to cart" button stays
+  inert.)
+- **Inactive products** (added 2026-10-24, alongside the cart feature):
+  previously `WishlistItemCreateSerializer` only blocked *adding* an
+  inactive product — an item already wishlisted that was later
+  deactivated stayed fully visible to everyone forever, on both the
+  owner's own page and the public share link. Now
+  `WishlistItemViewSet.get_queryset()` and
+  `PublicWishlistSerializer.get_items()` both `.exclude(product__active=False)`
+  unless the **viewing** user `is_staff` (the owner's own page: viewer ==
+  owner, so this is just `request.user.is_staff`; the public page can be
+  viewed by anyone, including staff browsing someone else's link, so it's
+  based on the actual requester, never the wishlist's owner). The item is
+  never deleted — only hidden from non-staff. `ProductSimpleListSerializer`
+  gained an `active` field (harmless to expose on the already-`active=True`-
+  filtered public product endpoints too) so staff responses can carry it;
+  the React side (`WishlistPage.tsx`/`PublicWishlistPage.tsx`) renders a
+  small red "Inactive product" badge when `product.active === false` —
+  reachable only for staff, since non-staff never receive such an item in
+  the payload at all. Relative ordering of the remaining visible items is
+  preserved automatically: excluding a subset of an already-`Meta.ordering`-
+  sorted queryset never renumbers the rest (confirmed by test), the same
+  way the pre-existing `private=False` filter on the public page already
+  worked. Both wishlist viewsets have `pagination_class = None`, so the
+  "effect of the filter on page count/navigation" concern doesn't apply.
 
-## Shopping cart / checkout — confirmed absent
+## Shopping cart
 
-A repository-wide search (backend and frontend) found **no cart, order, or
-checkout implementation anywhere**:
+**Implemented 2026-10-24** (see `../memory/changelog.md`) — previously this
+section documented a confirmed-absent cart; that is no longer the case.
+`app_checkout` (added 2026-10-21/22 as an unwired skeleton — model/manager/
+admin/old Django views only, no URL, no API, no tests) is now a real,
+tested REST API backing a React `/cart` page. `UserMenu.tsx`'s "orders"
+item is still inert (no orders/checkout feature exists) — that one remains
+accurate.
 
-- Backend: no `Cart`/`CartItem`/`Order` model, serializer, viewset, or URL.
-- Frontend: the cart link in `Navbar.tsx` is a dead `<a href="#">` with no
-  handler; the "Add to cart" button on `ProductDetailPage.tsx` and the
-  wishlist page both have inert "Add to cart" buttons; `UserMenu.tsx`'s
-  "orders" item is still an inert button with an explicit code comment
-  acknowledging it's "reserved for when it exists" — **addresses and
-  wishlist are no longer in this category** (both have real pages/API now,
-  see the Wishlist section above and `../memory/changelog.md`). Translation
-  strings for cart exist in every locale, but there is zero state, API, or
-  routing behind it.
+**Identity**: `CartItemModel.user` is a direct FK to the account (not a
+session/visitor key) — replacing the skeleton's original `cart_key`
+`CharField`, which was populated from `request.session.session_key` and
+could not survive login (Django's `login()` cycles the session key) or a
+different device. There is no anonymous cart and no cart-merge-on-login
+logic — only authenticated users ever reach the cart API
+(`IsAuthenticated`, the project's global default, no override), and
+`CartItemViewSet.get_queryset()` always filters by `request.user`, so
+another user's item 404s rather than leaking existence (same pattern as
+`WishlistItemViewSet`/`UserAddressViewSet`).
 
-Treat any task that assumes a working cart as requiring that feature to be
-built from scratch, not extended.
+**API** (`/api/checkout/items/`, `CartItemViewSet`): `GET` (list, returns
+the full `CartSummary`), `POST` (add — increments if the product is
+already present, via `CartItemModel.objects.add_item()`), `PATCH
+/{id}/` (update quantity, `MinValueValidator(1)` — 0/negative/fractional
+rejected), `DELETE /{id}/` (remove). Every one of these returns the same
+`CartSummarySerializer` shape (`items`, `subtotal`, `discount_total`,
+`total`) — never a bare item — so the frontend always has the
+authoritative recalculated state, matching the wishlist/address
+"mutation returns full fresh state" convention. `discount_total` is
+hardcoded `"0.00"` (no coupon/promotion engine exists). Totals always
+read the product's **live** `price` (via `select_related` in
+`summary_for()`), never the stored `CartItemModel.price` snapshot (kept
+updated on every write anyway, as a historical/audit value only) — so a
+price change is reflected immediately on the very next read, add, or
+quantity update.
+
+**Concurrency**: `add_item()` wraps the add-or-increment in
+`transaction.atomic()` with `select_for_update()` on the **user** row
+first — the same "lock the parent before touching children" pattern
+`UserAddressModel`/`promote_primary_address_after_delete.py`/
+`product_image.py`'s signal already use elsewhere, applied here because
+the cart has no other natural parent row. This replaced the skeleton's
+original `add_item()`, which had a real, unlocked `filter().first()`-then-
+write race. `unique_together = (("user", "product"),)` is the DB-level
+backstop.
+
+**Deactivation cascade**: a `post_save` signal on `ProductModel`
+(`app_checkout/signals/remove_product_from_carts_when_deactivated.py`,
+the first signal `app_checkout` has ever had) deletes every `CartItemModel`
+row for a product saved with `active=False` — confirmed `ProductAdmin`
+has no `list_editable`/custom bulk action that would bypass `save()` (so
+there's no `.update()` path to special-case). An inactive product also
+can't be (re-)added — `CartItemCreateSerializer.product` uses
+`PrimaryKeyRelatedField(queryset=ProductModel.objects.filter(active=True))`,
+the same free "exists and active" validation
+`WishlistItemCreateSerializer` already established.
+
+**Frontend**: `/cart` (`CartPage.tsx`) is a **top-level** route
+(`ProtectedRoute` + the main `Layout`, deliberately **not** nested in
+`AccountLayout` — confirmed with the user: a shopping cart is a purchase-
+flow page, not an account-settings page, unlike `/profile/wishlist`).
+Rows show thumbnail/name/slug/unit price/quantity stepper/line total/
+remove; the footer shows discount (always 0) and total; a coupon field +
+button are **purely visual** (no `onChange` wired beyond the input's own
+value, no handler, no message — per task scope, not a cut corner). State
+is shared via `CartContext`/`CartProvider` (mirrors `AuthContext`/
+`AuthProvider`'s exact `override`-wins-over-fetched-data shape) so the
+navbar's live item count, the add-to-cart buttons on `ProductCard`/
+`ProductDetailPage`, and the cart page itself all read/write one
+authoritative place — mutating any of them updates all of them
+immediately, no manual refetch. The provider skips fetching entirely
+while logged out (every cart endpoint 403s otherwise) and resets on
+`user.id` change (login/logout/switching accounts) via the
+render-time-adjustment pattern (not a `useEffect` calling `setState` —
+that trips `react-hooks/set-state-in-effect`), so one account's cart can
+never leak into another's view.
+
+**Logged-out add-to-cart → login → resume**: reuses the existing
+`withNext`/`safeNext`/`useNext` redirect machinery as-is — no second
+intent-storage mechanism. `useAddToCart.ts` (shared by `ProductCard` and
+`ProductDetailPage`'s main button) redirects a logged-out click to
+`withNext("/login", "/product/<slug>?addToCart=1")`; `ProductDetailPage`
+reads that one query flag on mount, fires the add exactly once (a ref
+guard), and strips the flag immediately (`navigate(..., {replace:true})`)
+— so refreshing the page afterward never re-adds. If the product became
+inactive in the meantime, the add 400s and an inline error shows instead
+(`t.product.addToCartError`); nothing is added if the user abandons the
+login page. `ProductCard` (grid view, no page of its own to resume on)
+always routes a logged-out click through the product's own detail page
+rather than trying to resume from the grid.
+
+**Legacy skeleton views preserved but unreachable**:
+`app_checkout/views/CartItemCreateView.py`/`CartItemTemplateView.py`
+(old Django template-based views from the 2026-10-21/22 skeleton) are
+kept per explicit instruction not to delete them, and their one call
+site each was adapted to the new `user`-based `add_item()` signature so
+the files stay type-correct — but they were never wired to any URL
+before this feature and still aren't; `CartItemTemplateView` also has no
+`checkout/cart.html` template on disk. Recommended for future cleanup,
+not acted on now.
 
 ## Internationalization — backend/frontend status
 
@@ -627,9 +738,13 @@ in this project's own catalogs.
 
 ## Calculations
 
-No business calculations beyond straightforward field validation were
-found. `ProductModel.price` is a plain `DecimalField` validated by
-`validate_positive_decimal` (must be `> 0`); there is no tax, discount,
-shipping, or total computation anywhere in the codebase (consistent with
-there being no cart/checkout). If pricing logic is added later, document it
-here.
+`ProductModel.price` is a plain `DecimalField` validated by
+`validate_positive_decimal` (must be `> 0`). As of 2026-10-24, the cart
+has the project's first real calculation:
+`CartItemManagerModel.summary_for()` — `subtotal = Σ(live product.price ×
+quantity)` (`Decimal` throughout, never `float`), `discount_total`
+hardcoded `Decimal("0.00")` (no coupon/promotion engine exists),
+`total = subtotal - discount_total`. This is the **one** place that math
+is computed — `CartSummarySerializer`/`CartItemViewSet`/the React
+`CartPage` all just display these three numbers, never recomputing them.
+There is still no tax or shipping computation anywhere.

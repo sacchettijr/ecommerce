@@ -1644,3 +1644,322 @@ component, not part of this request.
 
 **Verified**: `tsc -b` clean, `eslint .` clean, full Vitest — 155 passed,
 no regressions (no test asserted the removed heading, backend untouched).
+
+## 2026-10-24 — shopping cart implemented (backend + frontend)
+
+**Context**: `app_checkout` existed on disk since 2026-10-21/22 as an
+unwired skeleton (model/manager/admin/old Django template views, no URL,
+no API, no tests — see the 2026-10-22/23 audit that preceded this task).
+Every `.claude/` doc (`domain.md`, `roadmap.md`, `api.md`,
+`known_issues.md`, `project_state.md`, `structure.md`) still asserted "no
+cart exists anywhere," which was accurate as of the *previous* audit but
+not as of this task's starting point — all of them are updated as part of
+this entry.
+
+**Root architectural change**: `CartItemModel.cart_key` (a session-key
+string) was replaced with a direct `user` FK — the skeleton's original
+identity model could not survive login (Django's `login()` cycles the
+session key) or a different device, which the task required. New
+migration `app_checkout/migrations/0003_...py` (0001/0002 untouched);
+confirmed the table was empty (0 rows) before migrating, so this was a
+straight non-nullable `AddField`, no backfill needed. The autodetector
+initially ordered `AlterUniqueTogether` before the `AddField` it
+depends on, which fails with `FieldDoesNotExist` — fixed by hand-reordering
+the generated migration's operations.
+
+**Backend**: `CartItemManagerModel.add_item()` rewritten to lock the
+`user` row (`select_for_update()`, `transaction.atomic()`) before
+add-or-increment — the original method had a real, unlocked
+`filter().first()`-then-write race, confirmed closed by a 10-thread
+concurrent-add test. Added `summary_for()` (subtotal/discount_total/total,
+always from **live** `product.price`, `Decimal` throughout) as the one
+place cart totals are computed. New `app_checkout/api/{serializers,
+viewsets}/` (previously empty stubs) + `CartItemViewSet` registered at
+`/api/checkout/items/` — `IsAuthenticated` (project default, no override),
+`get_queryset()` scoped to `request.user` (404, not leaking, for another
+user's item), every action returns the full `CartSummary`. New
+`app_checkout/signals/remove_product_from_carts_when_deactivated.py` (a
+`post_save` on `ProductModel`, this app's first signal ever) deletes cart
+rows for any product saved inactive; confirmed `ProductAdmin` has no bulk
+`.update()` path that would bypass it. The two legacy, already-unreachable
+template views (`CartItemCreateView`/`CartItemTemplateView`) were kept
+(not deleted, per instruction) but their one call site each was adapted
+to the new `add_item(user=...)` signature so the files stay type-correct.
+
+**Wishlist extension** (same task, since it shares the "inactive product"
+rule): `WishlistItemViewSet.get_queryset()` and
+`PublicWishlistSerializer.get_items()` now `.exclude(product__active=False)`
+unless the *viewing* user `is_staff` — previously this was a creation-time-
+only gate (`WishlistItemCreateSerializer` already blocked adding an
+inactive product, but one deactivated *after* being wishlisted stayed
+visible to everyone forever). `ProductSimpleListSerializer` gained an
+`active` field for this. Item is never deleted, only hidden; relative
+order of the remaining items is preserved automatically (confirmed by
+test — excluding a subset of an already-ordered queryset never renumbers
+the rest).
+
+**Frontend**: new `CartContext`/`CartProvider` (mirrors `AuthContext`/
+`AuthProvider`'s exact override-wins-over-fetched-data shape) as the one
+shared source of cart state for the navbar badge, the add-to-cart buttons,
+and `/cart` itself. `CartProvider`'s "reset on account change" logic is
+done as a render-time state adjustment, not inside a `useEffect` calling
+`setState` — the latter trips `react-hooks/set-state-in-effect`
+(`Calling setState synchronously within an effect can trigger cascading
+renders`), caught by this project's own ESLint config. New `/cart`
+route — confirmed with the user to be a **top-level** route (`Layout` +
+`ProtectedRoute`), not nested in `AccountLayout` like `/profile/wishlist`,
+since a cart is part of the purchase flow, not account settings. New
+shared `useAddToCart.ts` (used by `ProductCard` and `ProductDetailPage`)
+implements the logged-out → login → resume flow entirely by reusing the
+*existing* `withNext`/`safeNext`/`useNext` redirect machinery — no second
+intent-storage mechanism: a logged-out click redirects to
+`withNext("/login", "/product/<slug>?addToCart=1")`, and
+`ProductDetailPage` reads that one query flag on mount, fires the add at
+most once (a ref guard), and strips the flag immediately
+(`navigate(..., {replace:true})`) so a page refresh afterward never
+re-adds. `ProductCard` (grid view) always routes a logged-out click
+through the product's own detail page rather than trying to resume from
+the grid. `Product` gained a required `active: boolean` field (the
+wishlist inactive-label feature needed it too) — every existing test
+fixture/literal constructing a `Product` was updated (`fixtures.ts`'s
+`makeProduct`, and four `.test.tsx` files with inline literals).
+
+**i18n**: new `cart` namespace (12 keys) + `wishlist.inactiveProductLabel`
++ `product.addToCartError` across all 5 locale files; `nav.cart` changed
+from a static string (`"Cart (0)"`) to a `(count: number) => string`
+function showing the live count.
+
+**Verified**: pre-migration row-count check (0), `manage.py
+makemigrations --check --dry-run` clean after the new migration,
+`manage.py migrate` applied cleanly, full backend `pytest` — 320 passed
+(was 283 before this task's prior turns' work, which itself had already
+reached that count — this task added 37 new backend tests on top),
+`manage.py check`, project-wide `ruff check`/`format --check`,
+`basedpyright`, `mypy --config-file=pyproject.toml` all clean. Frontend:
+`tsc -b`, `eslint .` clean, full Vitest — 177 passed (was 155), `npm run
+build` succeeds (the pre-existing >500kB chunk warning is unrelated to
+this change). `.claude/context/{domain,roadmap,api,project_state,
+structure,testing}.md` and `.claude/memory/known_issues.md` updated to
+replace the stale "no cart exists" claims with the real implementation.
+
+**Pending/not done**: checkout, order placement, and payment remain
+entirely unimplemented — only the cart itself exists now. The coupon
+field on `/cart` is intentionally visual-only (no validation, no request,
+no total change), per the task's own explicit scope. The two legacy
+template views remain unreachable (no URL, and `CartItemTemplateView`
+has no template file on disk) — recommended for future removal, not
+acted on.
+
+## 2026-10-24 (same day, follow-up) — cart page buttons + wishlist heart button on the product grid
+
+**Request**: two small additions on top of the cart feature above — (1)
+"Continue shopping"/"Checkout" buttons below `/cart`'s form, (2) a third,
+heart-icon button on `ProductCard` (the product grid) to add straight to
+the wishlist, alongside the existing "view details" and cart-icon buttons.
+
+**`/cart`**: added below the coupon/totals block (only when the cart has
+items): `<Link to="/">{t.cart.continueShopping}</Link>` and a plain
+`<button>{t.cart.checkoutButton}</button>` with no handler yet — per the
+request's own "por enquanto só adicionar o botão." New `cart.
+continueShopping`/`cart.checkoutButton` i18n keys, all 5 locales.
+
+**Product grid heart button**: new `useAddToWishlist.ts`
+(`frontend/src/components/product/`), deliberately a separate small hook
+rather than generalizing `useAddToCart.ts` into one shared "useAddToX" —
+matches this project's own stated convention of tolerating small
+near-identical mixins over a forced shared abstraction (see
+`conventions.md`). Mirrors `useAddToCart`'s logged-out behavior exactly:
+redirects to `withNext("/login", "/product/<slug>?addToWishlist=1")`;
+`ProductDetailPage` gained a second resume effect (alongside the existing
+`?addToCart=1` one) that fires the plain `addToWishlist()` call once and
+strips the flag — it doesn't try to reconcile state with the page's own
+`WishlistToggleButton`, since that component already runs its own
+membership check on every mount and will naturally pick up the new state.
+Unlike the cart button, a successful wishlist add has nowhere dedicated to
+navigate to, so it just marks itself `added` (fills the heart, disables
+the button) instead. New `product.addToWishlistLabel`/`addToWishlistError`
+i18n keys, all 5 locales.
+
+**Verified**: `tsc -b`, `eslint .` clean. Full Vitest — 183 passed (was
+177, +6 new: 2 on `CartPage.test.tsx` for the new buttons, 3 on
+`ProductCard.test.tsx` for the heart button's logged-in/logged-out/
+rendering behavior, 1 on `ProductDetailPage.test.tsx` for the
+`?addToWishlist=1` resume). `npm run build` succeeds.
+
+## 2026-10-24 (same day, second follow-up) — cart buttons aligned right; wishlist heart reflects real membership
+
+**Request 1**: align `/cart`'s "Continue shopping"/"Checkout" buttons
+together on the right instead of opposite ends. Changed the wrapping
+`<div>`'s `sm:justify-between` to `sm:justify-end` — one-line fix.
+
+**Request 2**: the grid's wishlist heart button (added in the previous
+follow-up) only reflected "added this session" — a product already in
+the user's wishlist from a prior visit showed an empty heart until
+clicked. Fixing this correctly meant knowing real membership without
+firing one `checkWishlistMembership`-style request per card in a grid of
+many products.
+
+**Fix**: new `WishlistContext`/`WishlistProvider`/`useWishlist.ts`
+(`frontend/src/context/`), mirroring `CartContext`/`CartProvider`'s exact
+shape — fetches the user's full wishlist once (skipped while logged out,
+reset on account change via the same render-time adjustment pattern, not
+a `useEffect`+`setState`). Mounted in `main.tsx` alongside `CartProvider`.
+`useAddToWishlist.ts`'s `added` is now derived from this shared state
+(`items?.some((item) => item.product.id === product.id)`) instead of a
+local post-click boolean, and a successful add calls `setItems()` with
+the API's own returned (full, authoritative) list — same pattern as
+`useAddToCart`/`CartContext`. `ProductDetailPage`'s existing
+`?addToWishlist=1` resume effect now also pushes its result into the
+shared context, so every `ProductCard`'s heart reflects an add that
+happened via the resume flow too. Deliberately left
+`ProductDetailPage`'s own `WishlistToggleButton` untouched — it already
+checks real membership correctly via its own `checkWishlistMembership`
+call; unifying it with the new context wasn't asked for and risked
+behavior changes to already-tested, working code for marginal benefit.
+
+**Verified**: `tsc -b`, `eslint .` clean. Full Vitest — 185 passed (was
+183, +2 net new: filled-heart-on-load and unfilled-when-absent cases on
+`ProductCard.test.tsx`; one existing test's mock fixed to return a
+realistic updated list, matching what the real API actually returns).
+`npm run build` succeeds.
+
+## 2026-10-24/25 — CloudBeaver served under /cloudbeaver/ + pre-seeded Postgres connection
+
+**Context**: the user was already mid-work on exposing CloudBeaver through
+nginx at `https://<host>/cloudbeaver/` instead of a published port (their
+own `docker-compose.yml` edit, found already in the working tree, switched
+it from `ports: ["8978:8978"]` to `expose: ["8978"]`) and had created an
+empty `cloudbeaver/cloudbeaver.conf` file as a placeholder for the rest.
+
+**Root path fix**: inspected the actual running container
+(`dbeaver/cloudbeaver:26.2.0`) directly rather than trusting docs that
+disagreed across versions — confirmed the shipped
+`/opt/cloudbeaver/conf/cloudbeaver.conf` already reads
+`CLOUDBEAVER_ROOT_URI` (default `/`) and `CLOUDBEAVER_APP_FORWARD_PROXY`
+(under `app`, default `false`) via `${VAR:default}` placeholders, so no
+custom config file was actually needed — set both as plain `environment:`
+entries on the `cloudbeaver` service instead. The placeholder
+`cloudbeaver.conf` is now unused (left in place, not deleted).
+
+**Necessary companion fix**: `nginx.conf`'s `/cloudbeaver/` location had
+`proxy_pass http://cloudbeaver:8978/;` (trailing slash) — nginx's own
+documented behavior is that this *strips* the matched location prefix
+before forwarding. That directly conflicts with `CLOUDBEAVER_ROOT_URI=/cloudbeaver/`
+(CloudBeaver would generate absolute links assuming nginx forwards the
+full path, which it wasn't). Removed the trailing slash so the full
+`/cloudbeaver/...` path reaches the upstream unchanged. Verified via curl:
+the served HTML's absolute links (`favicon.png`, `manifest.webmanifest`,
+etc.) now correctly carry the `/cloudbeaver/` prefix, and those exact
+URLs resolve (200) through nginx.
+
+**Pre-seeded Postgres connection**: added
+`cloudbeaver/initial-data-sources.conf` (host/port/database/user for the
+project's own `database` service, **no password** — `save-password: true`
+so CloudBeaver encrypts and remembers it after the user enters it once,
+rather than ever committing the real Postgres password to the repo in
+plain text), mounted read-only in `docker-compose.yml` at
+`/opt/cloudbeaver/conf/initial-data-sources.conf` (same convention as the
+existing `redis.conf`/`rabbitmq.conf` mounts). **Confirmed by direct
+testing this only takes effect on a brand-new workspace** — the
+pre-existing `cloudbeaver` volume already had its own (empty)
+`data-sources.json`, so mounting the file alone didn't retroactively seed
+it. With the user's explicit authorization, reset *only* the
+`ecommerce_cloudbeaver` volume (never the blanket `docker compose down -v`,
+which is denied at the permission layer and would have destroyed
+postgres/redis/rabbitmq data too) and recreated the container — confirmed
+the connection now appears in the real, running
+`GlobalConfiguration/.dbeaver/data-sources.json`.
+
+**Also discovered, unrelated to this change**: CloudBeaver has apparently
+never had its first-run setup wizard completed
+(`serverConfig.configurationMode: true` via GraphQL, both before and
+after this work) — this predates these changes and wasn't caused by them;
+flagging it here since the user may want to complete that wizard.
+
+**Verified**: read the real shipped `cloudbeaver.conf` inside the running
+container directly (not from possibly-stale docs) before deciding the
+env-var approach; `docker compose config --quiet` validates; curl-based
+end-to-end checks of both the root-URI fix and the pre-seeded connection,
+both confirmed working against the actual running services — not claimed
+without testing.
+
+## 2026-10-28 — Backend test audit, reorganization, and coverage expansion
+
+Comprehensive audit of backend test infrastructure across all 5 apps
+(`app_core`, `app_account`, `app_product`, `app_address`, `app_checkout`),
+using 3 parallel investigation passes (test-infrastructure/config/
+baseline, deep audit of `app_account`+`app_address`, deep audit of
+`app_product`+`app_core`+`app_checkout`+i18n) before any change, per the
+task's own investigate-before-implement sequencing.
+
+**Baseline** (before any change): 320 passed, 0 failed, 231 warnings,
+~9 min; `manage.py check` clean; no `conftest.py`/coverage tooling
+anywhere; all 5 apps already used a `tests/` package (no standalone
+`test.py`/`tests.py` existed — the reorganization concern this task
+anticipated turned out to be already resolved for 3 of 5 apps, and only a
+handful of standalone files needed moving for the other 2).
+
+**Reorganization** (file moves only, no behavior change):
+`app_account/tests/test_user_address_admin.py` → `tests/admin/`;
+`app_account/tests/test_frontend_url.py` → `tests/utils/`;
+`app_core/tests/test_rate_limit.py`/`test_validators.py` → `tests/utils/`.
+`app_account/tests/test_migrations.py` deliberately kept at the `tests/`
+root (a project-wide, cross-cutting check, not owned by one layer).
+`app_product/tests/test_product_admin.py` → `tests/admin/` had already
+been done (found as an uncommitted, in-progress move at the start of this
+task) — verified it still passes, didn't redo it.
+
+**New tests added** (121 total: 320 → 441 passed, 0 failed, both before
+and after), prioritized by business-criticality/security/data-integrity
+per the task's own instructions rather than attempting literal 100%
+branch coverage:
+- `app_account`: `CurrentUserMiddleware`/`BaseModel.created_by`/
+  `updated_by` stamping (zero coverage anywhere before, direct or
+  incidental); `create_default_superuser` signal (the weak-fallback-
+  credentials path documented as a regression guard, not an
+  endorsement — see `known_issues.md` #2); `UserManagerModel`/`UserModel`
+  untested branches; `EmailVerifiedModelBackend`'s `isinstance` guard.
+- `app_address`: every `on_delete=models.PROTECT` edge in the
+  Country→State→City hierarchy and in `UserAddressModel`'s direct FKs;
+  **discovered and documented a genuine gap** — no uniqueness constraint
+  exists anywhere in that hierarchy (see `known_issues.md` #19, flagged
+  for a user decision, not fixed); `CityListViewSet` non-staff-rejection
+  parity with `StateListViewSet`; non-integer query-param branches;
+  Country/State/City admin config; the shared name-normalization form
+  mixin's validation.
+- `app_product`: the "browse without authentication" goal and the
+  inactive-product exclusion rule for the public list/detail viewsets,
+  confirmed uniform for anonymous and staff alike — previously untested
+  despite being core to the project's stated goals.
+- `app_checkout`: `CartItemAdmin`; an isolated, direct signal-level test
+  of the deactivation-cascade signal (previously only exercised
+  indirectly through the API test file).
+- `app_core`: the health-check view; the remaining 7 of 8
+  `utils/validator.py` functions (only `validate_name` had a dedicated
+  test before); 4 previously-zero-coverage shared `utils/` modules
+  (`slug.py` — used by every `ProductBaseModel.save()`, never tested
+  before; `normalize.py`; `dispatch_task.py` — confirmed it actually
+  swallows+logs per its documented, intentional design; `current_user.py`).
+- **New**: the project's first dedicated internationalization tests
+  (`app_core/tests/i18n/test_translation.py`) — zero existed before.
+  Covers a `LANGUAGES`-count regression guard, direct
+  `translation.override`/`gettext` checks across en/pt-br/fr/it, and a
+  full-stack `Accept-Language` → `LocaleMiddleware` → translated-response
+  check including an explicit regression test for the 2026-10-18 fr/it
+  fallback bug.
+
+**Also discovered, unrelated to any change made**: a pre-existing mypy
+error in `app_checkout/models/CartItemModel.py` (confirmed present
+before this task via `git stash`) — see `known_issues.md` #20. Not fixed
+(out of scope: a typing defect in production code the audit's own tests
+didn't touch or cause).
+
+**Verified**: final full suite 441 passed, 0 failed, 268 warnings,
+~8 min; `manage.py check` clean; `manage.py makemigrations --check
+--dry-run` clean (no model changes — this was a tests-only task);
+project-wide `ruff check`/`format --check` clean (392 files); project-wide
+`mypy` clean except the one pre-existing, unrelated error above;
+project-wide `basedpyright` clean (0 errors). No frontend changes made
+(`frontend.old/` untouched, React test suite untouched, per the task's
+explicit scope boundary). No secrets read or exposed; no destructive
+database/Docker/git operations; nothing committed or pushed.

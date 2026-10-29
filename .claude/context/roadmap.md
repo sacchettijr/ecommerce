@@ -42,8 +42,12 @@ planned work:
   `testing.md`). The safety net exists now; the open question is
   coverage *breadth* (most pages/components still have none), not
   framework adoption.
-- If/when a cart is actually built, it is a from-scratch feature, not an
-  extension of anything that exists today.
+- ~~If/when a cart is actually built...~~ **Done 2026-10-24** — see
+  `domain.md`'s "Shopping cart" section. Coupons/promotions/discounts
+  remain unimplemented (the cart's `discount_total` is hardcoded `"0.00"`
+  by design, but the structure doesn't preclude adding real discount
+  rules later); checkout/order placement/payment still don't exist at
+  all — only the cart itself does.
 
 ## What this is not
 

@@ -89,7 +89,10 @@ read-only nested objects inside `/api/account/addresses/`'s response
 - `core/forms/ContactForm.py` exists but is unused; `ContactSerializer`
   duplicates its validation independently. If you touch contact-form
   validation, check both files or consolidate them (see `../memory/known_issues.md`).
-- No cart/checkout/order endpoints exist (see `domain.md`).
+- ~~No cart/checkout/order endpoints exist~~ **Cart added 2026-10-24** —
+  `/api/checkout/items/` (`CartItemViewSet`: list/create/partial_update/
+  destroy, see `domain.md`'s "Shopping cart" section for the full shape).
+  Checkout/order placement/payment still don't exist.
 - The address API only supports **reading the list and switching which
   one is primary** — there is still no create/update/delete endpoint for
   addresses (admin is still the only way to add or remove one). If asked

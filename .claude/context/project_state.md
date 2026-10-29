@@ -80,8 +80,24 @@ young, actively-evolving prototype, not a mature codebase).
   public+private items, move/delete/privacy controls, and a share-link
   action; the public page shows only public items, no edit controls, and
   an inert "give as a gift" button. The product detail page's wishlist
-  button is wired to real add/remove. "Add to cart" (both pages) and
-  "Give as a gift" stay visual-only. See `domain.md`/`api.md`.
+  button is wired to real add/remove. The wishlist row's own "Add to
+  cart" button and the public page's "Give as a gift" button remain
+  deliberately visual-only (not in scope for the cart task below). See
+  `domain.md`/`api.md`.
+- **Shopping cart** (added 2026-10-24): `/api/checkout/items/`
+  (`CartItemViewSet`) + `/cart` (`CartPage.tsx`, top-level protected
+  route). Account-based identity (not session-based), add/increment/
+  update-quantity/remove, live-price totals, inactive-product cascade
+  deletion, concurrency-safe via user-row locking. The real add-to-cart
+  buttons are on `ProductCard`/`ProductDetailPage`, including the
+  logged-out → login → resume flow. See `domain.md`'s "Shopping cart"
+  section for the full detail. Checkout/order placement/payment still
+  don't exist — only the cart itself does.
+- **Wishlist inactive-product visibility** (added 2026-10-24, alongside
+  the cart): a deactivated product stays stored in a wishlist but is now
+  hidden from non-staff viewers (owner's own page and the public share
+  link both), with a red "Inactive product" label shown only to staff.
+  See `domain.md`.
 
 ## Partially implemented
 
@@ -103,8 +119,9 @@ young, actively-evolving prototype, not a mature codebase).
 
 ## Confirmed not implemented
 
-- **Shopping cart / checkout / orders** — no model, API, or functional UI
-  exists anywhere. UI copy/icons/dead buttons exist on the frontend only.
+- **Checkout / order placement / payment** — the cart itself exists
+  (2026-10-24, see "Implemented and verified" above), but there is no
+  order model, no checkout flow, and no payment integration of any kind.
 - **Address create/edit/delete** — `/api/account/addresses/` only
   supports listing and switching the primary; there is still no
   endpoint or frontend workflow to create, edit, or delete an address

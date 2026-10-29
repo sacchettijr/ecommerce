@@ -121,11 +121,15 @@ import paths (`from app_account.models import ...`,
 |---|---|---|---|---|---|
 | `app_account/` | `app_account` | `account` | Yes, full | Yes (`UserAdmin` only) | `UserModel`, email verification, login/logout/session, password reset, `UserAddressModel` |
 | `app_address/` | `app_address` | `address` | **No** (admin-only) | Yes (Country/State/City) | Hierarchical reference data: `CountryModel` → `StateModel` → `CityModel` |
+| `app_checkout/` | `app_checkout` | `checkout` | Yes, full | Yes (`CartItemAdmin`) | `CartItemModel` — the shopping cart (added 2026-10-24; see `domain.md`) |
 | `app_core/` | `app_core` | `core` | Yes, full | — (no concrete models) | Shared `BaseModel` (audit fields), contact form/API, health check, shared pagination/filter/throttle infra |
 | `app_product/` | `app_product` | `product` | Yes, full | Yes | `ProductCategoryModel`, `ProductModel`, `ProductImageModel` |
 
-There is **no shopping-cart app or model anywhere** in the backend —
-see `domain.md` and `project_state.md`.
+`app_checkout` also still has two legacy, unreachable Django template
+views (`CartItemCreateView`/`CartItemTemplateView`, no URL wired, no
+template on disk) from when the app was first scaffolded — preserved per
+policy, not deleted, not functionally revived. See `domain.md`'s
+"Shopping cart" section for the full picture.
 
 ## `utils/`
 

@@ -277,10 +277,12 @@ Render today, by explicit documented tradeoff, not by accident.
 - **Nginx is the only service meant to be publicly reachable** once it's
   active — `backend`/`frontend` ports are intentionally `expose`-only
   (internal to the Docker network) with commented-out `ports:` entries and
-  an explanatory comment for how to re-enable direct-port testing. Several
-  *other* services (Postgres, Redis, RabbitMQ, CloudBeaver) are currently
-  still host-published — see `security.md` for why that's worth revisiting
-  before this is ever run on a non-isolated host.
+  an explanatory comment for how to re-enable direct-port testing.
+  CloudBeaver joined this group 2026-10-25 (`expose`-only, reachable via
+  nginx's `/cloudbeaver/` path, `CLOUDBEAVER_ROOT_URI`/
+  `CLOUDBEAVER_APP_FORWARD_PROXY` env vars). Postgres/Redis/RabbitMQ are
+  currently still host-published — see `security.md` for why that's worth
+  revisiting before this is ever run on a non-isolated host.
 - **Deterministic pseudo-random ordering via a date-seeded SQL hash, not
   `order_by("?")` or a stored random column.** `ProductSimpleListViewSet`
   (2026-10-16) is the reference example — see `domain.md`'s "Catalog

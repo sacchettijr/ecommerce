@@ -112,15 +112,21 @@
    Running `migrate` without the env vars set, in **any** environment,
    silently creates a guessable admin account. Treat this as a real
    finding to raise with the user, not something to "work around" quietly.
-2. **Database, Redis, RabbitMQ, and CloudBeaver ports are published to the
-   host** in `docker-compose.yml` (5432, 6379, 5672+15672, 8978), unlike
-   `backend`/`frontend` which are deliberately internal-only. This is
-   presumably fine on an isolated local dev machine, but if this compose
-   file is ever run on a non-isolated host (e.g. the same VPS whose public
-   IP is hard-coded into `nginx/nginx.conf`), those four services become
-   reachable from the public internet with no reverse-proxy/firewall layer
-   in front of them. Flag this before any non-local deployment using this
-   compose file as-is.
+2. **Database, Redis, and RabbitMQ ports are published to the host** in
+   `docker-compose.yml` (5432, 6379, 5672+15672), unlike `backend`/
+   `frontend` which are deliberately internal-only. This is presumably
+   fine on an isolated local dev machine, but if this compose file is
+   ever run on a non-isolated host (e.g. the same VPS whose public IP is
+   hard-coded into `nginx/nginx.conf`), those three services become
+   reachable from the public internet with no reverse-proxy/firewall
+   layer in front of them. Flag this before any non-local deployment
+   using this compose file as-is. **CloudBeaver (8978) was moved out of
+   this category 2026-10-25** — it's now `expose`-only (internal to the
+   Docker network) and reachable solely through nginx's `/cloudbeaver/`
+   path (`CLOUDBEAVER_ROOT_URI`/`CLOUDBEAVER_APP_FORWARD_PROXY` env vars
+   on the service, matching nginx's own forwarded-path handling — see
+   `../memory/changelog.md`), the same pattern `backend`/`frontend`
+   already used.
 3. **Django migrations are not committed to version control** (see
    `database.md`) — not a runtime vulnerability, but a real operational
    risk: a fresh clone/CI run cannot build a working database at all.

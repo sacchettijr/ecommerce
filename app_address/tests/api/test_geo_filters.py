@@ -69,6 +69,16 @@ def test_states_endpoint_rejects_a_non_staff_authenticated_user() -> None:
     assert response.status_code == 403
 
 
+def test_states_with_a_non_integer_country_filter_returns_an_empty_list() -> None:
+    make_geo()
+    client = make_staff_client()
+
+    response = client.get("/api/address/states/?country=not-a-number")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 # ---------------------------------------------------------- cities
 
 
@@ -84,9 +94,41 @@ def test_cities_filtered_by_state() -> None:
     assert ids == {city_1.pk}
 
 
+def test_cities_without_a_state_filter_returns_everything() -> None:
+    _, _, state_1, state_2 = make_geo()
+    city_1 = cast(CityModel, CityFactory(state=state_1))
+    city_2 = cast(CityModel, CityFactory(state=state_2))
+    client = make_staff_client()
+
+    response = client.get("/api/address/cities/")
+
+    ids = {row["id"] for row in response.json()}
+    assert {city_1.pk, city_2.pk} <= ids
+
+
 def test_cities_endpoint_rejects_anonymous_access() -> None:
     _, _, state, _ = make_geo()
 
     response = Client().get(f"/api/address/cities/?state={state.pk}")
 
     assert response.status_code in (401, 403)
+
+
+def test_cities_endpoint_rejects_a_non_staff_authenticated_user() -> None:
+    _, _, state, _ = make_geo()
+    client = Client()
+    client.force_login(cast(UserModel, UserFactory(is_staff=False)))
+
+    response = client.get(f"/api/address/cities/?state={state.pk}")
+
+    assert response.status_code == 403
+
+
+def test_cities_with_a_non_integer_state_filter_returns_an_empty_list() -> None:
+    make_geo()
+    client = make_staff_client()
+
+    response = client.get("/api/address/cities/?state=not-a-number")
+
+    assert response.status_code == 200
+    assert response.json() == []

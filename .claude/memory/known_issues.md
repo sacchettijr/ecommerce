@@ -87,12 +87,14 @@ needing further runtime verification.
 8. **`django-guardian` is installed and backend-registered but has zero
    actual usage** (no `assign_perm`, no object-level permission checks
    anywhere). Does not currently provide any real protection.
-9. **Database/Redis/RabbitMQ/CloudBeaver ports are published to the host**
-   in `docker-compose.yml` (5432, 6379, 5672+15672, 8978) while
-   `backend`/`frontend` are deliberately internal-only. Fine on an
-   isolated dev machine; a real exposure risk if this compose file is
-   ever run on a non-isolated host (the same VPS whose IP is hard-coded
-   into `nginx/nginx.conf`, for instance).
+9. **Database/Redis/RabbitMQ ports are published to the host** in
+   `docker-compose.yml` (5432, 6379, 5672+15672) while `backend`/
+   `frontend` are deliberately internal-only. Fine on an isolated dev
+   machine; a real exposure risk if this compose file is ever run on a
+   non-isolated host (the same VPS whose IP is hard-coded into
+   `nginx/nginx.conf`, for instance). **CloudBeaver (8978) resolved
+   2026-10-25** — moved to `expose`-only, now reachable exclusively
+   through nginx's `/cloudbeaver/` path, same pattern as backend/frontend.
 10. **`nginx/nginx.conf` uses a self-signed TLS certificate**, not a real
     one — confirmed by actually running `certbot` against production
     Let's Encrypt, which refused with "will not issue certificates for a
@@ -102,14 +104,16 @@ needing further runtime verification.
 11. **`.env-example` is missing `INTERNAL_IP`**, a real variable present
     in the actual `.env` and consumed by
     `PROJECT/settings/debug_toolbar.py`.
-12. **No shopping cart/checkout/order implementation exists anywhere** —
-    backend and frontend both confirmed via repo-wide search. Frontend
-    cart/orders UI elements are still inert placeholders
-    (profile/password-change/profile-edit/address-list/wishlist are no
-    longer in this category — see `../context/project_state.md`). The
+12. ~~No shopping cart/checkout/order implementation exists anywhere~~
+    **Cart resolved 2026-10-24** — see `../context/domain.md`'s "Shopping
+    cart" section for the full implementation (identity model, API,
+    deactivation cascade, concurrency, frontend). **Checkout/order
+    placement/payment still don't exist at all** — only the cart itself
+    does; treat any checkout/order task as building from scratch. The
     wishlist page's own "Add to cart" button and the public wishlist
-    page's "Give as a gift" button are also still inert, by explicit task
-    scope — see `../context/domain.md`'s Wishlist section.
+    page's "Give as a gift" button remain deliberately inert — wiring
+    them was not part of the cart task's scope (the wishlist page has its
+    own test asserting the button stays inert).
 13. **No CI/automation exists** (no `.github/workflows/`, no `Makefile`,
     no pre-commit hooks). All checks are run by hand.
 14. ~~**Zero frontend test infrastructure.**~~ **Partially resolved
@@ -163,6 +167,32 @@ needing further runtime verification.
     edits" — is unresolved and will bite again for any future backend
     change that isn't followed by an explicit restart. See
     `architecture.md`.
+
+19. **`app_address`'s Country/State/City hierarchy has no uniqueness
+    constraint at all.** Confirmed by direct inspection of
+    `CountryModel`/`StateModel`/`CityModel`/their migrations (2026-10-28
+    test audit): no `unique_together`, no `UniqueConstraint`, no
+    field-level `unique=True` on name/code within a parent. Two states can
+    share a name within the same country; two cities can share a name
+    within the same state. Every FK in the hierarchy is `on_delete=
+    models.PROTECT` (that part **is** tested now — see `testing.md`), but
+    nothing stops a duplicate from being created in the first place. This
+    is a genuine data-integrity gap, documented with a pair of tests that
+    pin down today's actual (unconstrained) behavior — see
+    `app_address/tests/models/test_protect_delete.py`. Not fixed:  adding
+    a constraint is a production-behavior change (needs a migration and a
+    decision on how to handle any existing duplicates) outside a
+    testing-focused task's scope. Needs a user decision.
+20. **`app_checkout/models/CartItemModel.py` has a pre-existing mypy
+    error**, confirmed present before and unrelated to the 2026-10-28 test
+    audit (reproduced on a clean `git stash`): `error: Name "UserModel"
+    already defined (by an import)  [no-redef]` and `error: Module
+    "app_account.models.UserModel" is not valid as a type  [valid-type]`
+    at the `if TYPE_CHECKING: from app_account.models import UserModel`
+    block (lines 25/29). `basedpyright`/`ruff` don't flag it — only
+    `mypy` does. Not fixed as part of the test audit (out of scope: a
+    typing defect in production model code, not something the audit's
+    own new tests touched or caused). Needs investigation separately.
 
 ## Lower-severity / cosmetic
 

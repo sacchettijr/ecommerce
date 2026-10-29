@@ -4,24 +4,76 @@
 
 Function-based pytest (`pytest` + `pytest-django`), `pytestmark =
 pytest.mark.django_db` at module level, `factory-boy` + `Faker` for test
-data. Each app follows `tests/{api,models,views}/` + `tests/factories/`.
+data. **As of 2026-10-28, every app's `tests/` package uses the richer
+subdirectory set the project standardized on**:
+`{api,admin,models,views,factories}/` everywhere, plus
+`{middleware,signals,backends}/` on `app_account` and `signals/` on
+`app_checkout` (only where that app actually has one), and a shared
+`utils/` subdirectory under `app_core/tests/` for every utility module in
+`utils/` regardless of which app happens to exercise it first (continuing
+the pre-existing convention of `test_rate_limit.py`/`test_validators.py`,
+just relocated out of the `tests/` root into `tests/utils/`). A handful of
+genuinely cross-cutting checks stay at an app's `tests/` root by design,
+not oversight: `app_account/tests/test_migrations.py` (a project-wide
+migration-graph check, not owned by any one layer).
+`app_core/tests/i18n/` is new — the project's first dedicated
+internationalization/translation tests (see "Internationalization
+testing" below). No app has a standalone `test.py`/`tests.py` file
+outside a `tests/` package, and none ever did (re-confirmed 2026-10-28).
+
+**Baseline before the 2026-10-28 test audit**: 320 passed, 0 failed, 231
+warnings, ~9 min runtime, no `conftest.py` anywhere, no coverage tooling
+installed (`pytest-cov`/`coverage` are not in either requirements file,
+and no `[tool.coverage.*]`/`.coveragerc` exists). **After**: 441 passed, 0
+failed, 268 warnings, ~8 min runtime — same zero-conftest/zero-coverage-
+tooling facts still hold; the audit only added tests, it didn't change
+the test-running infrastructure itself.
 
 ### Coverage by app (verified, not estimated)
 
 | App | Coverage |
 |---|---|
-| `app_account/` (label `account`) | Partial. Well covered: login/logout/session/signup/email-verification/password-reset/password-change (including the unchanged-password rejection)/profile-update flows, `is_staff` admin gate, `safe_next_path`, `frontend_scheme_and_domain` (`app_account/tests/api/test_auth_api.py`, `app_account/tests/test_frontend_url.py`); `UserAddressModel`'s primary-address invariant (first-is-primary, demote-on-set, promote-on-delete including the admin-formset-deletion edge case, DB constraint, cross-user isolation via the actual inline formset) and the `/api/account/addresses/` list/set-primary endpoints, including cross-user access attempts (`app_account/tests/models/test_user_address_rules.py`, `app_account/tests/api/test_user_address_api.py`); the country/state/city cross-field validation (`app_account/tests/models/test_user_address_form.py`); the address admin's rendered field order, standalone and inline (`app_account/tests/test_user_address_admin.py`); `UserWishlistModel`/`UserWishlistItemModel` — auto-creation on every user-creation path, one-wishlist-per-user, duplicate-product rejection (DB + form error message), `private` defaults to `False`, `position` append/reorg/gap-closing/cross-wishlist isolation, DB constraints (`app_account/tests/models/test_user_wishlist_rules.py`, `test_user_wishlist_item_rules.py`); the full `/api/account/wishlist/...` surface — own list (public+private), add (incl. duplicate/inactive rejection, ignoring any client-sent wishlist/user id), remove/toggle-privacy/move all scoped to the owner (404, not 403, for another user's item id, mirroring the address pattern), `check`, `share-link` (`app_account/tests/api/test_wishlist_item_api.py`); the public `/api/account/wishlist/public/{public_id}/` endpoint — works unauthenticated, only public items, response never contains a `private` key, bad/unknown id is 404, no cross-user leakage (`app_account/tests/api/test_public_wishlist_api.py`); the migration graph loads and matches model state (`app_account/tests/test_migrations.py`, written after the `NodeNotFoundError` incident — see `../memory/known_issues.md`); signup/profile-update reject a single-word `name` (`test_signup_rejects_a_single_word_name`, `test_profile_update_field_errors_for_invalid_values[name-Maria]`, added 2026-10-17 alongside the shared `validate_name()` fix — see `domain.md`). **Not covered**: `UserManagerModel` edge cases, every form except the auth/address/wishlist ones exercised via the API tests, `app_account/signals/create_default_superuser.py`, `app_account/management/commands/create_admin.py`, the wishlist admin inline formset. |
-| `app_address/` (label `address`) | Has its first tests of its own now (`app_address/tests/api/test_geo_filters.py`, added 2026-10-16: the country-filtered-states/state-filtered-cities endpoints, staff-only access). Everything else exercising `CityModel`/`StateModel`/`CountryModel` still does so indirectly through `app_account`'s address tests, including the new cross-field validation (`app_account/tests/models/test_user_address_form.py`). |
-| `app_core/` (label `core`) | Has its first tests now (added 2026-10-17): the full `/api/core/contact/` surface — valid submission accepted, invalid phone rejected and doesn't consume the cooldown, a single-word name rejected (`test_a_single_word_name_is_rejected`), the new 60s cooldown (blocked within the window with correct `retry_after`/`Retry-After`, allowed again once elapsed, independent per user/IP), and the pre-existing 5/hour cap confirmed still independently enforced (`app_core/tests/api/test_contact_api.py`); the cross-app `utils/rate_limit.py` helpers — atomic allow-and-record semantics under concurrency, user-vs-IP identification, a forged `X-Forwarded-For` entry not changing the computed identity (`app_core/tests/test_rate_limit.py`); the cross-app `utils/validator.py`'s `validate_name()` directly — every branch (empty, no letters, single word, punctuation-only second "part" not counting, 2+ parts accepted) (`app_core/tests/test_validators.py`, added 2026-10-17 — the first direct unit tests for anything in `utils/validator.py`). **Still not covered**: `BaseModel`, `ContactForm` (confirmed still dead/unused), `StableOrderingFilter`, `StandardPagination`, the health-check view, every other function in `utils/validator.py`. |
-| `app_product/` (label `product`) | Partial, concentrated on image ordering/upload paths (`app_product/tests/models/test_product_image_rules.py`, `test_upload_paths.py`) plus, added 2026-10-16: the admin field order (`app_product/tests/test_product_admin.py`) and the randomized default/explicit-override catalog ordering (`app_product/tests/api/test_product_randomized_ordering.py`). **Not covered**: `ProductCategoryModel`/`ProductModel` core logic beyond incidental factory use, `ProductForm`/`ProductCategoryForm`, `ProductFilterSet`, the list/category viewsets' other behavior (only ordering and the detail viewset are touched), most serializers. |
+| `app_account/` (label `account`) | Well covered: login/logout/session/signup/email-verification/password-reset/password-change (including the unchanged-password rejection)/profile-update flows, `is_staff` admin gate, `safe_next_path`, `frontend_scheme_and_domain` (`tests/api/test_auth_api.py`, `tests/utils/test_frontend_url.py`); `UserAddressModel`'s primary-address invariant and the `/api/account/addresses/` endpoints (`tests/models/test_user_address_rules.py`, `tests/api/test_user_address_api.py`); the address admin's field order (`tests/admin/test_user_address_admin.py`); `UserWishlistModel`/`UserWishlistItemModel` and the full `/api/account/wishlist/...` surface, including the public endpoint (`tests/models/test_user_wishlist_rules.py`, `test_user_wishlist_item_rules.py`, `tests/api/test_wishlist_item_api.py`, `test_public_wishlist_api.py`); the migration graph (`tests/test_migrations.py`). **Added 2026-10-28**: `CurrentUserMiddleware`/`BaseModel`'s `created_by`/`updated_by` stamping — previously zero coverage anywhere, direct or incidental (`tests/middleware/test_current_user_middleware.py`); `app_account/signals/create_default_superuser.py` — the weak-fallback-credentials path, the `DJANGO_SUPERUSER_*`-env-var path, the already-exists no-op, idempotency (`tests/signals/test_create_default_superuser.py`); `UserManagerModel.create_user`/`create_superuser`'s `ValueError` guard branches, `UserModel.get_full_name`/`get_short_name`/`__str__`/`user_email_confirmation`/the name-and-email normalization on save (`tests/models/test_user_manager.py`, `test_user_model.py`); `EmailVerifiedModelBackend`'s `isinstance` guard and active/verified branches, previously only exercised indirectly via login (`tests/backends/test_email_verified_backend.py`). **Still not covered**: `app_account/management/commands/create_admin.py`/`seed_users.py`, the wishlist admin classes and `UserWishlistBaseForm`/`Create`/`UpdateForm`, `UserAdminChangeForm`/`UserAdminCreationForm`, the email tasks' retry branch. |
+| `app_address/` (label `address`) | **Substantially expanded 2026-10-28** (previously only `tests/api/test_geo_filters.py`, added 2026-10-16): added `tests/models/test_protect_delete.py` — every `on_delete=models.PROTECT` edge in the Country→State→City hierarchy and in `UserAddressModel`'s direct city/state/country FKs, confirmed via `ProtectedError`; also **documents a genuine, confirmed finding**: none of `CountryModel`/`StateModel`/`CityModel` has any uniqueness constraint (no `unique_together`, no `UniqueConstraint`, no field-level `unique=True`) on name/code within their parent — two tests pin down today's actual (unconstrained) behavior as a regression guard, not as an endorsement; this is flagged for the user, not fixed, since adding a constraint is a production-behavior change outside a testing task's scope. Extended `tests/api/test_geo_filters.py` with the `CityListViewSet` non-staff-rejection case (parity with `StateListViewSet`, which already had it) and the non-integer-query-param → empty-list branch for both endpoints. Added `tests/admin/test_geo_admin.py` (Country/State/City admin config) and `tests/forms/test_geo_forms.py` (the shared `NormalizedAddressNameFieldMixin`'s <3-character rejection, `StateForm`'s `validate_alpha` code field). **Still not covered**: `CityLocationSelect`/`StateLocationSelect` widgets (the frontend-cascading-dropdown data attributes). |
+| `app_checkout/` (label `checkout`) | Added 2026-10-24 alongside the cart feature: `CartItemManagerModel` and the full `/api/checkout/items/` surface (`tests/models/test_cart_item_manager.py`, `tests/api/test_cart_api.py`). **Added 2026-10-28**: `CartItemAdmin`'s list/search/filter config and add/change form split (`tests/admin/test_cart_item_admin.py`); an isolated, direct signal-level test of `remove_product_from_carts_when_deactivated` — deactivate removes, re-activate/no-op leaves alone, re-saving an already-inactive product doesn't error, scoped to only that product's rows across every cart (`tests/signals/test_remove_product_from_carts_when_deactivated.py`) — previously this signal was only exercised indirectly through the API test file. **Still not covered**: the two legacy, unreachable template views (`CartItemCreateView`/`CartItemTemplateView` — confirmed still dead code), `CartItemBaseForm`/`CartItemCreateForm`/`CartItemUpdateForm` (empty passthrough forms, low risk). |
+| `app_core/` (label `core`) | Added 2026-10-17: the `/api/core/contact/` surface and `utils/rate_limit.py` (`tests/api/test_contact_api.py`, `tests/utils/test_rate_limit.py`). **Added 2026-10-28**: the remaining 7 of 8 functions in `utils/validator.py` that had zero coverage (`validate_positive_decimal`, `validate_non_negative_decimal`, `validate_min_length`, `validate_max_length`, `validate_alpha`, `validate_image_max_size`, `validate_image_dimensions`, `validate_image_extension` — only `validate_name` had a dedicated test before; extended `tests/utils/test_validators.py` in place); the health-check view (`tests/views/test_api_health_check.py` — previously zero test hit `/api/core/health/` at all); four previously-zero-coverage shared `utils/` modules that don't belong to any one app — `utils/slug.py`'s `generate_slug`/`generate_unique_slug` (used by every `ProductBaseModel.save()`, never tested before), `utils/normalize.py`, `utils/dispatch_task.py` (the documented, intentional swallow-and-log pattern — now has a direct test confirming it actually swallows and logs rather than propagating), `utils/current_user.py` (all in `tests/utils/`); and the project's first dedicated i18n test suite, `tests/i18n/test_translation.py` (see below). **Still not covered**: `BaseModel`'s own fields in isolation (its stamping behavior is tested from `app_account`'s middleware test, since `BaseModel` itself has no concrete subclass to instantiate directly), `ContactForm` (confirmed still dead/unused), `StableOrderingFilter`, `StandardPagination`, `utils/email.py`, `utils/image.py`. |
+| `app_product/` (label `product`) | Concentrated on image ordering/upload paths plus admin field order and randomized ordering (`tests/models/test_product_image_rules.py`, `test_upload_paths.py`, `tests/admin/test_product_admin.py`, `tests/api/test_product_randomized_ordering.py`). **Added 2026-10-28**: `tests/api/test_product_visibility.py` — the business-critical "browse without authentication" goal end-to-end (anonymous list/detail/category access all `200`), and the inactive-product exclusion rule for both the list and detail viewsets, confirmed uniform for anonymous *and* staff alike (no staff carve-out exists here, unlike the wishlist) — previously untested despite being core to the project's stated goals. **Still not covered**: `ProductForm`/`ProductCategoryForm`/`ProductImageForm` and their 5 `Normalized*FieldMixin`s' validation branches, `ProductCategoryAdmin`/`ProductImageAdmin`/`ProductImageInlineAdmin`, `ProductFilterSet` beyond the category-slug filter already covered, `seed_products` management command. |
 
-No app has any `tests/views/*.py` content — every `views/__init__.py`
-across every app is empty.
+No app has any `tests/views/*.py` content beyond the new
+`app_core/tests/views/test_api_health_check.py` — every other
+`views/__init__.py` across every app is still empty (consistent with no
+other app having a reachable Django view outside its DRF viewsets).
+
+### Internationalization testing (new 2026-10-28)
+
+The backend had **zero** i18n-specific tests before this date — no test
+anywhere activated a non-default language, overrode translation context,
+read `get_language()`, or sent an `Accept-Language` header to assert a
+localized response (confirmed by a repo-wide grep across every `tests/`
+tree). `app_core/tests/i18n/test_translation.py` closes this:
+- A settings-level regression guard pinning `LANGUAGES` to exactly the 5
+  required locales (`pt-br`, `en`, `es`, `fr`, `it`) — guards against the
+  2026-10-18 regression recurring (see `known_issues.md`).
+- Direct `translation.override(...)` + `gettext(...)` checks for one real,
+  already-catalogued string (`LoginForm`'s "This account has been
+  deactivated.") across en/pt-br/fr/it, plus a `utils/validator.py`
+  message under `pt-br`.
+- Full-stack: a real `Accept-Language` header through `LocaleMiddleware`
+  into a real `/api/account/login/` 400 response, confirmed for en and
+  pt-br with the same `code` but different message text; an explicit
+  regression test that `fr` no longer falls back to English (the exact
+  bug fixed 2026-10-18); an unsupported language (`de`) falling back to
+  the default (`en`) rather than erroring.
+Still true: the gettext catalogs remain very sparse (7 real custom
+strings per locale) — these tests exercise the handful that exist and the
+activation mechanism itself; they don't (and can't) cover strings that
+have no catalog entry yet.
 
 ### Factories
 
 `app_account.tests.factories.{UserFactory,UserAddressFactory,UserWishlistFactory,UserWishlistItemFactory}`,
 `app_address.tests.factories.{CountryFactory,StateFactory,CityFactory}`,
+`app_checkout.tests.factories.CartItemFactory`,
 `app_product.tests.factories.{ProductCategoryFactory,ProductFactory,ProductImageFactory}`.
 `UserWishlistFactory` uses `django_get_or_create = ("user",)` — every user
 already gets a wishlist via `create_wishlist_for_new_user` (see
@@ -120,7 +172,25 @@ that for new test files rather than turning `globals` on.
   countdown resuming correctly from `localStorage` after a simulated
   reload); `ProfileEditPage.test.tsx` updated in place (the masked
   display value, normalized submitted payload) rather than extended (130
-  tests total now). Nothing else in the frontend has tests yet, and no
+  tests total at the time). Several further small fixes between
+  2026-10-17 and 2026-10-24 (not individually itemized here) brought the
+  count to 155 before the cart feature below. Added 2026-10-24 (shopping
+  cart feature): `src/pages/CartPage.test.tsx` (new — loading/error states,
+  empty state with the products link, item rendering, quantity +/-
+  calling the API and reflecting the fresh summary, remove + success
+  message, the coupon field/button confirmed to do nothing); extended
+  `src/components/product/ProductCard.test.tsx` and
+  `src/pages/ProductDetailPage.test.tsx` for the add-to-cart flow
+  (logged-in adds + navigates to `/cart`, logged-out redirects to
+  `/login?next=/product/<slug>?addToCart=1`, the resume effect firing
+  exactly once and stripping the query flag, an inactive-product error
+  not navigating); new `src/components/layout/Navbar.test.tsx` (the cart
+  link's live item count from `CartContext`); extended
+  `src/pages/WishlistPage.test.tsx`/`PublicWishlistPage.test.tsx` for the
+  new inactive-product red label (shown only when the fixture's
+  `product.active` is `false`, matching the backend's staff-only
+  visibility rule) (177 tests total now). Nothing else in the frontend
+  has tests yet, and no
   test touches `HomePage.tsx` as a whole, only its extracted pieces — this
   is still a start, not full coverage; don't assume other components/pages
   are tested.
