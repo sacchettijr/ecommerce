@@ -2,11 +2,9 @@
 # TEMPORALY / TODO LIST
 # =========================================================
 
-#   TODO: remover migrations da lista quando estiver mais próximo de adicionar a produção
 #   TODO: remover frontend.old/ após fazer a adaptação das páginas.
 
 frontend.old/
-migrations/
 
 # =========================================================
 # IDE / EDITORS
