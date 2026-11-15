@@ -58,16 +58,16 @@ services:
       routes:
           - type: rewrite
             source: /api/*
-            destination: https://ecommerce-django.onrender.com/api/*
+            destination: https://ecommerce-django-77ou.onrender.com/api/*
           - type: rewrite
             source: /admin/*
-            destination: https://ecommerce-django.onrender.com/admin/*
+            destination: https://ecommerce-django-77ou.onrender.com/admin/*
           - type: rewrite
             source: /static/*
-            destination: https://ecommerce-django.onrender.com/static/*
+            destination: https://ecommerce-django-77ou.onrender.com/static/*
           - type: rewrite
             source: /media/*
-            destination: https://ecommerce-django.onrender.com/media/*
+            destination: https://ecommerce-django-77ou.onrender.com/media/*
           - type: rewrite
             source: /*
             destination: /index.html
