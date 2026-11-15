@@ -5,15 +5,9 @@ databases:
       user: ecommerce
 
 services:
-    #   Key Value (compatível com Redis) — serve como broker e result backend do
-    #   Celery no Render, no lugar do RabbitMQ (que não tem equivalente gerenciado
-    #   gratuito/pago simples lá). Ver PROJECT/settings/celery.py.
     - name: ecommerce-redis
       type: keyvalue
       plan: free
-      #   Vazio de propósito: só ecommerce-django/ecommerce-celery precisam alcançar
-      #   isto, e ambos usam a connectionString interna (mesma conta/região no
-      #   Render) — nenhum acesso externo é necessário.
       ipAllowList: []
 
     - name: ecommerce-django
@@ -24,8 +18,6 @@ services:
       dockerContext: .
       healthCheckPath: /api/core/health/
       envVars:
-          #   Fase de prototipação: DEBUG continua True nos dois ambientes (local e Render).
-          #   Vai virar False quando o projeto entrar em produção de verdade.
           - key: DEBUG
             value: "True"
           - key: SECRET_KEY
@@ -34,16 +26,11 @@ services:
             fromDatabase:
                 name: ecommerce-db
                 property: connectionString
-          #   Connection string do Key Value (ecommerce-redis) acima — broker e result
-          #   backend do Celery (ver PROJECT/settings/celery.py). O serviço web também
-          #   precisa disso: é quem *enfileira* as tasks (current_app.send_task(...)).
           - key: REDIS_URL
             fromService:
                 name: ecommerce-redis
                 type: keyvalue
                 property: connectionString
-          #   Defina depois do primeiro deploy do "ecommerce-frontend", com a URL real dele
-          #   (https://...onrender.com) — é para onde apontam os links de e-mail.
           - key: FRONTEND_URL
             sync: false
           - key: SITE_NAME
@@ -69,24 +56,16 @@ services:
           - key: DEFAULT_FROM_EMAIL
             sync: false
 
-    #   Worker do Celery — processa as 3 tasks de e-mail (confirmação de cadastro,
-    #   recuperação de senha, contato). Mesma imagem do ecommerce-django, só troca o
-    #   comando. Precisa essencialmente dos mesmos envVars porque importa o mesmo
-    #   PROJECT.settings por completo (ver PROJECT/celery.py).
     - name: ecommerce-celery
       type: worker
       runtime: docker
       plan: starter
       dockerfilePath: ./Dockerfile
       dockerContext: .
-      dockerCommand: celery -A PROJECT worker --loglevel=info
+      dockerCommand: celery -A PROJECT worker --loglevel=info --concurrency=2
       envVars:
           - key: DEBUG
             value: "True"
-          #   NÃO usar generateValue aqui — geraria um valor diferente do já gerado
-          #   pro ecommerce-django, e os dois processos precisam da MESMA SECRET_KEY.
-          #   Depois do primeiro deploy, copie o valor real de ecommerce-django →
-          #   Environment → SECRET_KEY pra aqui.
           - key: SECRET_KEY
             sync: false
           - key: DATABASE_URL
