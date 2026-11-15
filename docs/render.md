@@ -16,8 +16,11 @@ ecommerce-frontend (Static Site)
     │
     ├── /api/*, /admin/*, /static/*, /media/*  ──▶  ecommerce-django (Web Service, Docker)
     │                                                        │   build a partir de backend/Dockerfile
-    │                                                        ▼
-    │                                                  Postgres (gerenciado)
+    │                                                        ├──▶ Postgres (gerenciado, ecommerce-db)
+    │                                                        └──▶ Key Value (ecommerce-redis)
+    │                                                                   ▲   broker + result backend
+    │                                                                   │
+    │                                               ecommerce-celery (Background Worker, mesma imagem)
     │
     └── qualquer outra rota ──▶ index.html (React Router decide no navegador)
 ```
@@ -36,24 +39,27 @@ ali.
 
 | Serviço | Motivo |
 |---|---|
-| **Redis** | usado como cache do Django e result backend do Celery; sem função sozinho no Render neste primeiro deploy. |
-| **RabbitMQ** | broker do Celery; não existe um equivalente gratuito gerenciado pelo Render, e adicionar um pago não foi autorizado. |
-| **Celery (worker)** | só processa os 3 e-mails abaixo; sem RabbitMQ, não há para onde rodar. |
-| **CloudBeaver** | ferramenta de administração do banco, só para uso local. Nenhum código da aplicação depende dele. |
+| **RabbitMQ** | não existe um equivalente gerenciado no Render. O Celery no Render usa o Key Value (`ecommerce-redis`, compatível com Redis) como broker **e** result backend em vez de RabbitMQ — ver `PROJECT/settings/celery.py`. Localmente continua tudo como sempre (RabbitMQ + Redis). |
+| **CloudBeaver** | ferramenta de administração do banco, só para uso local. Nenhum código da aplicação depende dele. Para acessar o Postgres do Render, use `render psql <db-id>` ou `render pgcli <db-id>` pelo Render CLI — não precisa de um serviço rodando só pra isso. |
 | **Nginx** | no Render, os `routes` do Static Site fazem esse papel; adicionar um Nginx próprio seria uma camada a mais sem necessidade. |
 
-### O que isso quebra/limita no protótipo
+**Celery e Redis agora existem no Render** (`ecommerce-celery`, um Background Worker
+no plano `starter`, e `ecommerce-redis`, um Key Value no plano `free`) — não são mais
+exclusivos do Docker Compose local. Isso tem um custo real: o Background Worker não
+tem tier gratuito (o Key Value tem). Veja "Limitações do plano gratuito" abaixo.
 
-Sem Celery/RabbitMQ, estes fluxos continuam respondendo com sucesso (não dão erro
-500 — ver `backend/utils/dispatch_task.py`), mas **nenhum e-mail é enviado de verdade**:
+### E-mails de verdade
+
+Com o Celery worker + Key Value no Render, as 3 tarefas abaixo voltam a ser
+processadas de verdade (não é mais "responde com sucesso mas não envia" — ver
+`utils/dispatch_task.py` para o que acontece se o broker estiver fora do ar):
 
 - confirmação de cadastro (signup) e reenvio de confirmação;
 - recuperação de senha;
 - formulário de contato.
 
-Ou seja: dá para testar o cadastro, mas o link de confirmação nunca chega; dá para
-"pedir" a recuperação de senha, mas o e-mail não sai. Isso é esperado neste primeiro
-deploy e está documentado aqui de propósito — não é um bug.
+Preencha `EMAIL_HOST`/`EMAIL_HOST_USER`/`EMAIL_HOST_PASSWORD`/`DEFAULT_FROM_EMAIL`
+com credenciais reais (ver passo 3 abaixo) para os e-mails saírem de fato.
 
 ### `DEBUG` nesta fase
 
@@ -68,21 +74,27 @@ do Render.
 ## Passo a passo no painel do Render
 
 1. **Conectar o repositório**: no Render, "New" → "Blueprint", escolha este
-   repositório no GitHub. O Render lê `render.yaml` automaticamente e propõe os
-   dois serviços (`ecommerce-django`, `ecommerce-frontend`) e o banco
-   (`ecommerce-db`).
-2. **Primeiro deploy**: aceite a criação. O Postgres e os dois serviços sobem.
-   `DATABASE_URL` e `SECRET_KEY` já são preenchidos sozinhos pelo Blueprint.
+   repositório no GitHub. O Render lê `render.yaml` automaticamente e propõe o
+   banco (`ecommerce-db`), o Key Value (`ecommerce-redis`) e 3 serviços
+   (`ecommerce-django`, `ecommerce-celery`, `ecommerce-frontend`).
+2. **Primeiro deploy**: aceite a criação. `DATABASE_URL` (django + celery) e
+   `REDIS_URL` (django + celery) já são preenchidos sozinhos pelo Blueprint.
+   `SECRET_KEY` é gerado automaticamente só no `ecommerce-django`.
 3. **Configurar as variáveis marcadas como manuais** (aparecem em branco no
    painel, uma por serviço, em Environment):
-   - No **ecommerce-django**: depois que o `ecommerce-frontend` tiver uma URL
-     pública (ex.: `https://ecommerce-frontend.onrender.com`), volte aqui e
+   - **No `ecommerce-celery`**: copie o `SECRET_KEY` real do `ecommerce-django`
+     (Environment → clique no valor → copiar) para o `SECRET_KEY` do
+     `ecommerce-celery` — **os dois precisam ter o mesmo valor**, por isso o
+     `render.yaml` não usa `generateValue` nos dois (geraria valores
+     diferentes).
+   - **No `ecommerce-django`**: depois que o `ecommerce-frontend` tiver uma URL
+     pública (ex.: `https://ecommerce-frontend-xxxx.onrender.com`), volte aqui e
      defina `FRONTEND_URL` com essa URL — é o endereço que vai para os links dos
-     e-mails.
+     e-mails. Copie o mesmo valor para `FRONTEND_URL` no `ecommerce-celery`.
    - Se quiser que os e-mails realmente saiam, preencha `EMAIL_HOST`,
-     `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` (mesmos
-     valores que você usa no `.env` local) — mas lembre que sem Celery essas
-     tarefas ainda não são processadas neste deploy (ver seção acima).
+     `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` **nos dois**
+     serviços (`ecommerce-django` e `ecommerce-celery`) com as mesmas
+     credenciais reais (as mesmas que você usa no `.env` local).
 4. **Ajustar o destino das rotas do frontend, se necessário**: `render.yaml`
    assume que o serviço Django vai se chamar `ecommerce-django` (URL
    `https://ecommerce-django.onrender.com`). Se o Render gerar um nome/URL
@@ -118,12 +130,21 @@ Confirme no serviço `ecommerce-django`, em Environment:
   links de e-mail saem errados. Configure com a URL real do
   `ecommerce-frontend` assim que ela existir (ver passo 3 acima).
 - **Com valor padrão seguro quando ausentes** (não precisam ser configuradas
-  no Render): `POSTGRES_*`, `REDIS_*`, `RABBITMQ_*`, `ALLOWED_HOSTS`,
-  `INTERNAL_IP`, `CSRF_TRUSTED_ORIGINS` — o código detecta o ambiente
-  (`DATABASE_URL` presente → usa o Postgres do Render; variável `RENDER`
-  presente, injetada automaticamente pelo próprio Render → cache em memória
-  em vez de Redis; `RENDER_EXTERNAL_HOSTNAME`, também automática → some ao
-  `ALLOWED_HOSTS`/`CSRF_TRUSTED_ORIGINS` sozinha).
+  no Render): `POSTGRES_*`, `REDIS_HOST`/`REDIS_PORT`/`REDIS_CELERY_DB`,
+  `RABBITMQ_*`, `ALLOWED_HOSTS`, `INTERNAL_IP` — o código detecta o ambiente
+  (`DATABASE_URL` presente → usa o Postgres do Render; `REDIS_URL` presente →
+  Celery usa o Key Value do Render como broker/result backend em vez de
+  RabbitMQ/Redis locais; variável `RENDER` presente, injetada automaticamente
+  pelo próprio Render → cache do Django em memória em vez de Redis;
+  `RENDER_EXTERNAL_HOSTNAME`, também automática → some ao `ALLOWED_HOSTS`
+  sozinha).
+- **`CSRF_TRUSTED_ORIGINS` precisa incluir o domínio do `ecommerce-frontend`**
+  (ex.: `https://ecommerce-frontend-xxxx.onrender.com`) — o código só adiciona
+  automaticamente o domínio do próprio `ecommerce-django`
+  (`RENDER_EXTERNAL_HOSTNAME`), não o do frontend. Sem isso, login/cadastro
+  (e qualquer POST) falham com 403 "CSRF verification failed", porque o
+  navegador envia esse domínio no header `Origin` e ele precisa estar na
+  lista de origens confiáveis.
 
 ## Limitações do plano gratuito (leia antes do primeiro deploy)
 
@@ -141,7 +162,10 @@ Confirme no serviço `ecommerce-django`, em Environment:
 - **O Postgres gratuito tem um limite de conexões e de tamanho** (verifique o
   valor atual no painel do Render; pode mudar com o tempo) e o Render costuma
   expirar bancos gratuitos após um período de inatividade prolongado.
-- **Sem e-mails de verdade** neste primeiro deploy, como explicado acima.
+- **`ecommerce-celery` (Background Worker) não tem tier gratuito** — o menor
+  plano pago (`starter`, <1 CPU / 512MB) é cobrado continuamente (não
+  "dorme" como o Web Service free), atualmente na faixa de $7/mês. O
+  `ecommerce-redis` (Key Value) usa o tier `free` (25MB), sem custo.
 
 ## Testar a configuração de produção localmente (antes de mexer no Render)
 

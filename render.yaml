@@ -5,6 +5,17 @@ databases:
       user: ecommerce
 
 services:
+    #   Key Value (compatível com Redis) — serve como broker e result backend do
+    #   Celery no Render, no lugar do RabbitMQ (que não tem equivalente gerenciado
+    #   gratuito/pago simples lá). Ver PROJECT/settings/celery.py.
+    - name: ecommerce-redis
+      type: keyvalue
+      plan: free
+      #   Vazio de propósito: só ecommerce-django/ecommerce-celery precisam alcançar
+      #   isto, e ambos usam a connectionString interna (mesma conta/região no
+      #   Render) — nenhum acesso externo é necessário.
+      ipAllowList: []
+
     - name: ecommerce-django
       type: web
       runtime: docker
@@ -23,8 +34,70 @@ services:
             fromDatabase:
                 name: ecommerce-db
                 property: connectionString
+          #   Connection string do Key Value (ecommerce-redis) acima — broker e result
+          #   backend do Celery (ver PROJECT/settings/celery.py). O serviço web também
+          #   precisa disso: é quem *enfileira* as tasks (current_app.send_task(...)).
+          - key: REDIS_URL
+            fromService:
+                name: ecommerce-redis
+                type: keyvalue
+                property: connectionString
           #   Defina depois do primeiro deploy do "ecommerce-frontend", com a URL real dele
           #   (https://...onrender.com) — é para onde apontam os links de e-mail.
+          - key: FRONTEND_URL
+            sync: false
+          - key: SITE_NAME
+            value: E-Commerce
+          - key: LANGUAGE_CODE
+            value: pt-br
+          - key: TIME_ZONE
+            value: America/Manaus
+          - key: PAGE_SIZE
+            value: "25"
+          - key: PHONENUMBER_DEFAULT_REGION
+            value: BR
+          - key: EMAIL_HOST
+            sync: false
+          - key: EMAIL_PORT
+            value: "587"
+          - key: EMAIL_USE_TLS
+            value: "True"
+          - key: EMAIL_HOST_USER
+            sync: false
+          - key: EMAIL_HOST_PASSWORD
+            sync: false
+          - key: DEFAULT_FROM_EMAIL
+            sync: false
+
+    #   Worker do Celery — processa as 3 tasks de e-mail (confirmação de cadastro,
+    #   recuperação de senha, contato). Mesma imagem do ecommerce-django, só troca o
+    #   comando. Precisa essencialmente dos mesmos envVars porque importa o mesmo
+    #   PROJECT.settings por completo (ver PROJECT/celery.py).
+    - name: ecommerce-celery
+      type: worker
+      runtime: docker
+      plan: starter
+      dockerfilePath: ./Dockerfile
+      dockerContext: .
+      dockerCommand: celery -A PROJECT worker --loglevel=info
+      envVars:
+          - key: DEBUG
+            value: "True"
+          #   NÃO usar generateValue aqui — geraria um valor diferente do já gerado
+          #   pro ecommerce-django, e os dois processos precisam da MESMA SECRET_KEY.
+          #   Depois do primeiro deploy, copie o valor real de ecommerce-django →
+          #   Environment → SECRET_KEY pra aqui.
+          - key: SECRET_KEY
+            sync: false
+          - key: DATABASE_URL
+            fromDatabase:
+                name: ecommerce-db
+                property: connectionString
+          - key: REDIS_URL
+            fromService:
+                name: ecommerce-redis
+                type: keyvalue
+                property: connectionString
           - key: FRONTEND_URL
             sync: false
           - key: SITE_NAME
